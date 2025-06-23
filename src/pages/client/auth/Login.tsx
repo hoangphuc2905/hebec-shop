@@ -1,7 +1,49 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaFacebook } from "react-icons/fa";
+import { useState } from "react";
+import { loginCustomer } from "../../../api/customerApi";
+import { message } from "antd";
 
 const Login = () => {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Chuyển 0xxx => 84xxx
+    let formattedPhone = phone;
+    if (phone.startsWith("0")) {
+      formattedPhone = "84" + phone.slice(1);
+    }
+
+    try {
+      const res = await loginCustomer({
+        phone: formattedPhone,
+        password,
+      });
+
+      if (res?.data?.token) {
+        localStorage.setItem("token", res.data.token);
+
+        // Kích hoạt sự kiện login-success để Header biết và cập nhật
+        window.dispatchEvent(new Event("login-success"));
+
+        message.success("Đăng nhập thành công!");
+        navigate("/");
+      } else {
+        message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+      }
+    } catch (err: any) {
+      message.error(err.message || "Đăng nhập thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-4">
       <div className="w-full max-w-md">
@@ -16,7 +58,6 @@ const Login = () => {
 
         {/* Login box */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-          {/* Header */}
           <div className="bg-green-50 px-8 py-4 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-800">Đăng nhập</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -24,17 +65,19 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Form */}
           <div className="p-8">
-            <form className="space-y-5">
+            <form className="space-y-5" onSubmit={handleLogin}>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">
-                  Tên tài khoản
+                  Số điện thoại
                 </label>
                 <input
                   type="text"
-                  placeholder="Nhập tên tài khoản"
+                  placeholder="Nhập số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full border border-gray-300 px-4 py-2.5 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                  required
                 />
               </div>
 
@@ -45,43 +88,22 @@ const Login = () => {
                 <input
                   type="password"
                   placeholder="Nhập mật khẩu"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full border border-gray-300 px-4 py-2.5 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                  required
                 />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center"></div>
-                <a href="#" className="text-sm text-green-600 hover:underline">
-                  Quên mật khẩu?
-                </a>
               </div>
 
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-md font-medium transition-colors duration-200 flex items-center justify-center"
               >
-                Đăng nhập
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="my-6 flex items-center">
-              <div className="flex-grow border-t border-gray-300"></div>
-              <span className="mx-4 text-sm text-gray-500">
-                Hoặc tiếp tục với
-              </span>
-              <div className="flex-grow border-t border-gray-300"></div>
-            </div>
-
-            {/* Social login */}
-            <div className="flex justify-center">
-              <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-md font-medium transition-colors duration-200 w-full max-w-xs">
-                <FaFacebook className="text-xl" />
-                <span>Facebook</span>
-              </button>
-            </div>
-
-            {/* Register link */}
             <div className="mt-6 text-center">
               <span className="text-gray-600">Chưa có tài khoản? </span>
               <Link

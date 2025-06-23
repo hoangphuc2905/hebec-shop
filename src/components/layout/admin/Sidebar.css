@@ -1,0 +1,65 @@
+.admin-sidebar {
+  background-color: #001529;
+  overflow: auto;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.sidebar-logo-container {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.sidebar-logo {
+  height: 32px;
+  width: auto;
+}
+
+.sidebar-menu {
+  border-right: 0;
+  padding-top: 12px;
+}
+
+/* Custom styles for menu items */
+.ant-menu-dark.ant-menu-inline .ant-menu-item {
+  height: 45px;
+  line-height: 45px;
+  margin: 0;
+  padding-left: 24px;
+}
+
+.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title {
+  height: 45px;
+  line-height: 45px;
+  margin: 0;
+}
+
+.ant-menu-item .ant-menu-item-icon,
+.ant-menu-submenu-title .ant-menu-item-icon {
+  margin-right: 10px;
+}
+
+/* Custom scrollbar */
+.admin-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+  background: #001529;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

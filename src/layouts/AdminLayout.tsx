@@ -1,25 +1,30 @@
-import { Outlet } from "react-router-dom";
-// import AdminHeader from "../components/admin/Header";
-// import AdminSidebar from "../components/admin/Sidebar";
+import React, { useState } from "react";
 import { Layout } from "antd";
+import { Outlet } from "react-router-dom";
+import AdminHeader from "../components/layout/admin/Header";
+import Sidebar from "../components/layout/admin/Sidebar";
+import "./AdminLayout.css";
 
-const { Content, Footer } = Layout;
+const { Content } = Layout;
 
-function AdminLayout() {
+const AdminLayout: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
+
   return (
-    <Layout className="min-h-screen">
-      {/* <AdminSidebar /> */}
-      <Layout>
-        {/* <AdminHeader /> */}
-        <Content className="p-6">
+    <Layout className="admin-layout">
+      <Sidebar collapsed={collapsed} />
+      <Layout className={`site-layout ${collapsed ? "collapsed" : ""}`}>
+        <AdminHeader collapsed={collapsed} toggle={toggleSidebar} />
+        <Content className="admin-content">
           <Outlet />
         </Content>
-        <Footer className="text-center">
-          Hebec Shop Admin ©{new Date().getFullYear()}
-        </Footer>
       </Layout>
     </Layout>
   );
-}
+};
 
 export default AdminLayout;

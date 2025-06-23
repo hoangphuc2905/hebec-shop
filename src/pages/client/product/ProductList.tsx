@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { getProducts } from "../../../api/productApi";
+import { message } from "antd";
 
+// Định nghĩa interface dựa trên cấu trúc API trả về
 interface Product {
   id: number;
   name: string;
-  price: number;
+  finalPrice: number;
   image: string;
+  description?: string;
+  code: string;
+  sold?: number;
+  productCategory: {
+    id: number;
+    name: string;
+    slug: string;
+    icon?: string;
+  };
 }
 
 interface Category {
@@ -21,55 +33,53 @@ const CategoryProducts = () => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    setTimeout(() => {
-      const sampleCategories: Category[] = [
-        {
-          id: 1,
-          name: "Nữ Công Gia Chánh - Mẹo Vặt - Cẩm Nang",
-          slug: "nu-cong-gia-chanh",
-          products: [
-            {
-              id: 1,
-              name: "Trẻ Lâu Đẹp Dáng",
-              price: 82000,
-              image:
-                "https://salt.tikicdn.com/cache/280x280/ts/product/65/ae/44/73256656d447425db7510a9ac5d84a12.jpg",
-            },
-            {
-              id: 2,
-              name: "Món Ăn Giúp Bé Khỏe Mạnh & Thông Minh",
-              price: 32000,
-              image:
-                "https://salt.tikicdn.com/cache/280x280/ts/product/c1/64/b2/2cbacd97d8e01786dd7c17052cafdd4c.jpg",
-            },
-          ],
-        },
-        {
-          id: 2,
-          name: "Sách Nấu Ăn Gia Đình",
-          slug: "sach-nau-an",
-          products: [
-            {
-              id: 3,
-              name: "Mặn Béo Chua Nóng",
-              price: 480000,
-              image:
-                "https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg",
-            },
-            {
-              id: 4,
-              name: "125 Món Nướng Đặc Sắc",
-              price: 34000,
-              image:
-                "https://salt.tikicdn.com/cache/280x280/ts/product/0f/81/e4/4edcf40f864506b1c41a2d7a7c1e67e8.jpg",
-            },
-          ],
-        },
-      ];
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-      setCategories(sampleCategories);
-      setLoading(false);
-    }, 500);
+        // Lấy tất cả sản phẩm
+        const response = await getProducts();
+
+        if (response?.data?.products && response.data.products.length > 0) {
+          // Nhóm sản phẩm theo danh mục
+          const groupedProducts: { [key: number]: Category } = {};
+
+          response.data.products.forEach((product: Product) => {
+            const categoryId = product.productCategory?.id;
+
+            if (categoryId && product.productCategory) {
+              if (!groupedProducts[categoryId]) {
+                // Tạo category mới nếu chưa có
+                groupedProducts[categoryId] = {
+                  id: categoryId,
+                  name: product.productCategory.name,
+                  slug: product.productCategory.slug,
+                  products: [],
+                };
+              }
+
+              // Thêm sản phẩm vào danh mục tương ứng
+              groupedProducts[categoryId].products.push(product);
+            }
+          });
+
+          // Chuyển đổi object thành mảng danh mục
+          const categoriesArray = Object.values(groupedProducts);
+          setCategories(categoriesArray);
+        } else {
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
+        message.error(
+          "Không thể tải danh sách sản phẩm. Vui lòng thử lại sau."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const formatPrice = (price: number) => {
@@ -80,6 +90,15 @@ const CategoryProducts = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8 flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  // Hiển thị thông báo nếu không có danh mục nào
+  if (categories.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8 text-center">
+        <p className="text-gray-500">Không tìm thấy sản phẩm nào.</p>
       </div>
     );
   }
@@ -103,7 +122,7 @@ const CategoryProducts = () => {
 
           {/* Products Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {category.products.map((product) => (
+            {category.products.slice(0, 4).map((product) => (
               <Link
                 key={product.id}
                 to={`/products/${product.id}`}
@@ -120,21 +139,28 @@ const CategoryProducts = () => {
                   {product.name}
                 </h3>
                 <div className="font-medium text-green-600">
-                  {formatPrice(product.price)}
+                  {formatPrice(product.finalPrice)}
                 </div>
+                {product.sold && product.sold > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Đã bán: {product.sold}
+                  </div>
+                )}
               </Link>
             ))}
           </div>
 
-          {/* "Xem thêm" link */}
-          <div className="text-center mt-6">
-            <Link
-              to={`/danh-muc/${category.slug}/tat-ca`}
-              className="text-green-600 hover:text-green-800 underline"
-            >
-              Xem thêm
-            </Link>
-          </div>
+          {/* "Xem thêm" link nếu có nhiều hơn 4 sản phẩm */}
+          {category.products.length > 4 && (
+            <div className="text-center mt-6">
+              <Link
+                to={`/danh-muc/${category.slug}`}
+                className="text-green-600 hover:text-green-800 underline"
+              >
+                Xem thêm
+              </Link>
+            </div>
+          )}
         </div>
       ))}
     </div>

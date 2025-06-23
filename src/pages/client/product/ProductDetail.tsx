@@ -1,24 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ShareAltOutlined, HeartOutlined } from "@ant-design/icons";
-import { Image } from "antd";
+import { Image, message } from "antd";
+import { getProductById } from "../../../api/productApi";
 
+// Cập nhật interface phù hợp với response API
 interface Product {
-  id: string;
+  id: number;
   name: string;
-  price: number;
-  publisher: string;
-  stock: number;
-  mainImage: string;
-  thumbnails: string[];
-  details: {
-    publisher: string;
-    publishDate: string;
-    size: string;
-    pages: number;
-    manufacturer: string;
-  };
+  finalPrice: number;
+  unitPrice: number;
   description: string;
+  image: string;
+  images: string[];
+  code: string;
+  sold: number;
+  brandName: string;
+  createdAt: number;
+  updatedAt: number;
+  productCategory: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  store: {
+    name: string;
+    address: string;
+  };
 }
 
 const ProductDetail = () => {
@@ -28,59 +36,59 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<string>("description");
   const [mainImage, setMainImage] = useState<string>("");
+  const [thumbnails, setThumbnails] = useState<string[]>([]);
 
   useEffect(() => {
-    // Mô phỏng API call
-    setTimeout(() => {
-      const productData = {
-        id: "1",
-        name: "143 Món Khai Vị Hấp Dẫn",
-        price: 37000,
-        publisher: "Gia Bảo",
-        stock: 50,
-        mainImage:
-          "https://sobee.vn/site/wp-content/uploads/2023/06/Screenshot-140.png",
-        thumbnails: [
-          "https://sobee.vn/site/wp-content/uploads/2023/06/Screenshot-140.png",
-          "https://salt.tikicdn.com/cache/280x280/ts/product/65/ae/44/73256656d447425db7510a9ac5d84a12.jpg",
-          "https://salt.tikicdn.com/cache/280x280/ts/product/c1/64/b2/2cbacd97d8e01786dd7c17052cafdd4c.jpg",
-        ],
-        details: {
-          publisher: "Công ty phát hành",
-          publishDate: "15/05/2021 00:00:00",
-          size: "13 x 20.5 cm",
-          pages: 189,
-          manufacturer: "Nhà xuất bản Hà Nội",
-        },
-        description: `143 Món Khai Vị Hấp Dẫn
+    const fetchProductDetail = async () => {
+      if (!id) return;
 
-Món ăn chơi của món khai vị kích thích ngon miệng và vào ăn cơm giúp ngày của bạn ngon ăn nhưng. Món ăn được chế biến bằng
-truyền thống gia truyền nấu hương thanh và nhẹ mùi vị nước mắm và lá chanh phong phú và cơi nhúng mau rau chùm ngò thái xắt lát
-nấu. Ánh trực tiếp từ lò nướng đặt trên miếng khai vị trên phong phủ xử bán hàng rộng, giải nhu người điển tại làm trộn chém giòn đè nhưm
-rơi trước khi vào bữa chính ninh giai.
+      try {
+        setLoading(true);
+        const response = await getProductById(id);
 
-Cuốn sách giới thiệu công thức 143 món khai vị ngon miệng, giúp phần bữa phong phú thực đơn bữa tiệc. Các món ăn được chế
-biến ở nhiều...
+        if (response?.data) {
+          const productData = response.data;
+          setProduct(productData);
 
-- Món salad (salad đầu mùa ngô, salad tánh, salad hàm suốn, salad hạt hướng đạt)
+          // Thiết lập hình ảnh chính
+          setMainImage(productData.image);
 
-- Món súp (súp hamburger, súp cà bắt cảui thịt, súp gấc, súp mì cua, súp tôm rau)
+          // Thiết lập hình ảnh thumbnail
+          const productImages =
+            productData.images?.length > 0
+              ? [
+                  productData.image,
+                  ...productData.images.map((img: any) => img.url || img),
+                ]
+              : [productData.image];
 
-- Món về món các hương thiên (cỗn nộm dưới, gỏi cá trích, babao cá nhồi ổi, trứ ăn, bột, bánh hỏi gà)...
+          setThumbnails(productImages);
+        } else {
+          message.error("Không tìm thấy thông tin sản phẩm");
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải thông tin sản phẩm:", error);
+        message.error(
+          "Không thể tải thông tin sản phẩm. Vui lòng thử lại sau."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-Công thức chế biến được trình bày đơn giản, dễ hiểu. Bày là cuốn sách giúp độc giả có thêm nhiều lựa chọn món trong việc nấu ăn
-hàng ngày.`,
-      };
-
-      setProduct(productData);
-      setMainImage(productData.mainImage);
-      setLoading(false);
-    }, 500);
+    fetchProductDetail();
   }, [id]);
 
   // Format giá tiền theo VND
   const formatPrice = (price: number) => {
     return `${price.toLocaleString("vi-VN")} đ`;
+  };
+
+  // Format ngày từ timestamp
+  const formatDate = (timestamp: number) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString("vi-VN");
   };
 
   // Xử lý thay đổi số lượng
@@ -108,12 +116,12 @@ hàng ngày.`,
 
   // Xử lý thêm vào giỏ hàng
   const handleAddToCart = () => {
-    alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
+    message.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
 
   // Xử lý mua ngay
   const handleBuyNow = () => {
-    alert(`Chuyển đến trang thanh toán với ${quantity} sản phẩm`);
+    message.info(`Chuyển đến trang thanh toán với ${quantity} sản phẩm`);
   };
 
   if (loading) {
@@ -139,10 +147,23 @@ hàng ngày.`,
         <ol className="list-none p-0 flex flex-wrap items-center">
           <li className="flex items-center">
             <Link to="/" className="text-gray-500 hover:text-green-600">
-              Home
+              Trang chủ
             </Link>
             <span className="mx-2 text-gray-400">›</span>
           </li>
+          {product.productCategory && (
+            <>
+              <li className="flex items-center">
+                <Link
+                  to={`/danh-muc/${product.productCategory.slug}`}
+                  className="text-gray-500 hover:text-green-600"
+                >
+                  {product.productCategory.name}
+                </Link>
+                <span className="mx-2 text-gray-400">›</span>
+              </li>
+            </>
+          )}
           <li className="flex items-center text-gray-800">{product.name}</li>
         </ol>
       </nav>
@@ -153,7 +174,7 @@ hàng ngày.`,
         <div>
           {/* Main Image with Ant Design Image */}
           <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-white flex justify-center">
-            <Image.PreviewGroup items={[mainImage, ...product.thumbnails]}>
+            <Image.PreviewGroup items={thumbnails}>
               <Image
                 src={mainImage}
                 alt={product.name}
@@ -187,26 +208,28 @@ hàng ngày.`,
           </div>
 
           {/* Thumbnails */}
-          <div className="flex gap-2 justify-center flex-wrap">
-            {product.thumbnails.map((thumb, index) => (
-              <div
-                key={index}
-                className={`border rounded-lg w-16 h-16 overflow-hidden cursor-pointer transition-all
-                  ${
-                    thumb === mainImage
-                      ? "border-green-500 shadow-md"
-                      : "border-gray-200 hover:border-green-300"
-                  }`}
-                onClick={() => handleThumbnailClick(thumb)}
-              >
-                <img
-                  src={thumb}
-                  alt={`${product.name} thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
+          {thumbnails.length > 1 && (
+            <div className="flex gap-2 justify-center flex-wrap">
+              {thumbnails.map((thumb, index) => (
+                <div
+                  key={index}
+                  className={`border rounded-lg w-16 h-16 overflow-hidden cursor-pointer transition-all
+                    ${
+                      thumb === mainImage
+                        ? "border-green-500 shadow-md"
+                        : "border-gray-200 hover:border-green-300"
+                    }`}
+                  onClick={() => handleThumbnailClick(thumb)}
+                >
+                  <img
+                    src={thumb}
+                    alt={`${product.name} thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Info */}
@@ -214,20 +237,37 @@ hàng ngày.`,
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
             {product.name}
           </h1>
-          <p className="text-sm text-gray-500 mb-4">
-            Nhà xuất bản: {product.publisher}
-          </p>
 
-          <div className="text-xl font-bold text-green-600 mb-4">
-            {formatPrice(product.price)}
+          {product.brandName && (
+            <p className="text-sm text-gray-500 mb-4">
+              Thương hiệu: {product.brandName}
+            </p>
+          )}
+
+          <div className="flex items-center mb-4 space-x-3">
+            <span className="text-2xl font-bold text-green-600">
+              {formatPrice(product.finalPrice)}
+            </span>
+
+            {product.finalPrice < product.unitPrice && (
+              <span className="text-sm line-through text-gray-500">
+                {formatPrice(product.unitPrice)}
+              </span>
+            )}
           </div>
 
+          {product.sold > 0 && (
+            <p className="text-sm text-gray-600 mb-4">Đã bán: {product.sold}</p>
+          )}
+
+          {/* Mã sản phẩm */}
           <p className="text-sm text-gray-600 mb-4">
-            Số lượng: {product.stock}
+            Mã sản phẩm: {product.code}
           </p>
 
           {/* Quantity Selector */}
           <div className="flex items-center mb-6">
+            <span className="mr-3 text-gray-700">Số lượng:</span>
             <div className="border border-gray-300 rounded flex items-center mr-4">
               <button
                 onClick={decreaseQuantity}
@@ -305,27 +345,33 @@ hàng ngày.`,
                   <table className="w-full text-sm">
                     <tbody>
                       <tr>
-                        <td className="py-2 text-gray-600">
-                          Công ty phát hành
+                        <td className="py-2 text-gray-600">Mã sản phẩm</td>
+                        <td className="py-2">{product.code}</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 text-gray-600">Danh mục</td>
+                        <td className="py-2">
+                          {product.productCategory?.name || "N/A"}
                         </td>
-                        <td className="py-2">{product.details.publisher}</td>
                       </tr>
+                      {product.brandName && (
+                        <tr>
+                          <td className="py-2 text-gray-600">Thương hiệu</td>
+                          <td className="py-2">{product.brandName}</td>
+                        </tr>
+                      )}
                       <tr>
-                        <td className="py-2 text-gray-600">Ngày phát hành</td>
-                        <td className="py-2">{product.details.publishDate}</td>
+                        <td className="py-2 text-gray-600">Ngày tạo</td>
+                        <td className="py-2">
+                          {formatDate(product.createdAt)}
+                        </td>
                       </tr>
-                      <tr>
-                        <td className="py-2 text-gray-600">Kích thước</td>
-                        <td className="py-2">{product.details.size}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-gray-600">Số trang</td>
-                        <td className="py-2">{product.details.pages}</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-gray-600">Nhà xuất bản</td>
-                        <td className="py-2">{product.details.manufacturer}</td>
-                      </tr>
+                      {product.store && (
+                        <tr>
+                          <td className="py-2 text-gray-600">Cửa hàng</td>
+                          <td className="py-2">{product.store.name}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

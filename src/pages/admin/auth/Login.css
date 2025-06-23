@@ -1,0 +1,54 @@
+.admin-login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.admin-login-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.admin-login-logo img {
+  max-width: 180px;
+  margin: 0 auto;
+}
+
+.admin-login-form {
+  margin-top: 16px;
+}
+
+.admin-login-button {
+  height: 46px;
+  font-size: 16px;
+  background-color: #19a6a6;
+  border-color: #19a6a6;
+  margin-top: 12px;
+}
+
+.admin-login-button:hover,
+.admin-login-button:focus {
+  background-color: #128585;
+  border-color: #128585;
+}
+
+.required-label::after {
+  content: '*';
+  color: #ff4d4f;
+  margin-left: 4px;
+}
+
+.ant-form-item-label > label {
+  font-weight: 500;
+}
