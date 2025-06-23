@@ -2,15 +2,11 @@ import homeImg from "../../../assets/hebec-merchants.png";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import {
-  EnvironmentOutlined,
-  PhoneOutlined,
-  MailOutlined,
-} from "@ant-design/icons";
+import { EnvironmentOutlined, PhoneOutlined } from "@ant-design/icons";
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slideInterval = useRef<NodeJS.Timeout | null>(null);
+  const slideInterval = useRef<number | null>(null);
 
   // Dữ liệu cho slideshow banner
   const bannerSlides = [
@@ -19,18 +15,21 @@ const Home = () => {
       image:
         "https://cdn.xanhsm.com/2025/03/f8dbb5d9-nha-sach-tan-binh-thumb.jpg",
       alt: "Chuyển đổi số Hebec",
+      title: "Chuyển đổi số Hebec",
     },
     {
       id: 2,
       image:
         "https://cafefcdn.com/thumb_w/640/203337114487263232/2025/5/9/avatar1746772909112-17467729094091375930140.png",
       alt: "Giải pháp giáo dục Hebec",
+      title: "Giải pháp giáo dục Hebec",
     },
     {
       id: 3,
       image:
         "https://thanhnien.mediacdn.vn/Uploaded/congson/2022_11_16/sach-2171.jpg",
       alt: "Đổi mới sáng tạo Hebec",
+      title: "Đổi mới sáng tạo Hebec",
     },
   ];
 
@@ -49,7 +48,6 @@ const Home = () => {
     );
   };
 
-  // Tự động chuyển slide
   const startSlideInterval = () => {
     slideInterval.current = setInterval(() => {
       goToNextSlide();

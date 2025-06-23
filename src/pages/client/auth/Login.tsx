@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "react-router-dom";
-import { FaFacebook } from "react-icons/fa";
 import { useState } from "react";
 import { loginCustomer } from "../../../api/customerApi";
 import { message } from "antd";
@@ -14,7 +13,6 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Chuyển 0xxx => 84xxx
     let formattedPhone = phone;
     if (phone.startsWith("0")) {
       formattedPhone = "84" + phone.slice(1);
@@ -29,16 +27,22 @@ const Login = () => {
       if (res?.data?.token) {
         localStorage.setItem("token", res.data.token);
 
-        // Kích hoạt sự kiện login-success để Header biết và cập nhật
         window.dispatchEvent(new Event("login-success"));
 
         message.success("Đăng nhập thành công!");
         navigate("/");
       } else {
-        message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+        message.error(
+          "Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin."
+        );
       }
-    } catch (err: any) {
-      message.error(err.message || "Đăng nhập thất bại");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        message.error(`Lỗi: ${err.message}`);
+      } else {
+        message.error("Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.");
+      }
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }

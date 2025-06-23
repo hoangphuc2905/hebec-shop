@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerCustomer } from "../../../api/customerApi";
+import type { Customer } from "../../../types/interfaces/customer.interface";
+import { message } from "antd";
 
 const Register = () => {
   const [phone, setPhone] = useState("");
@@ -12,27 +14,34 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Mật khẩu không khớp.");
+      message.error("Mật khẩu không khớp. Vui lòng kiểm tra lại.");
       return;
     }
 
     setLoading(true);
+
+    const customerData: Partial<Customer> = {
+      phone,
+      password,
+      fullName: "Khách hàng mới",
+    };
+
     const data = {
-      customer: {
-        phone,
-        password,
-        fullName: "Khách hàng mới", // Bạn có thể thêm input nếu muốn
-        gender: "UNKNOWN",
-      },
+      customer: customerData,
       refCustomerId: 0,
     };
 
     try {
       await registerCustomer(data);
-      alert("Đăng ký thành công!");
+      message.success("Đăng ký thành công! Vui lòng đăng nhập.");
       navigate("/login");
-    } catch (err: any) {
-      alert("Lỗi: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        message.error(`Lỗi: ${err.message}`);
+      } else {
+        message.error("Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.");
+      }
+      console.error("Register error:", err);
     } finally {
       setLoading(false);
     }

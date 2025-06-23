@@ -1,6 +1,5 @@
 import axios from "axios";
 
-// Tạo instance axios riêng
 const axiosClient = axios.create({
   baseURL: "https://shop.staging.bmdapp.store:3249/v1",
   headers: {
@@ -42,6 +41,8 @@ export const logoutCustomer = async () => {
     });
     // Xoá token khỏi localStorage
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("cart");
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Lỗi không xác định." };

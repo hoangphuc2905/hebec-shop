@@ -1,33 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ShareAltOutlined, HeartOutlined } from "@ant-design/icons";
-import { Image, message } from "antd";
+import { Button, Image, Input, message } from "antd";
 import { getProductById } from "../../../api/productApi";
-
-// Cập nhật interface phù hợp với response API
-interface Product {
-  id: number;
-  name: string;
-  finalPrice: number;
-  unitPrice: number;
-  description: string;
-  image: string;
-  images: string[];
-  code: string;
-  sold: number;
-  brandName: string;
-  createdAt: number;
-  updatedAt: number;
-  productCategory: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-  store: {
-    name: string;
-    address: string;
-  };
-}
+import type { Product } from "../../../types/interfaces/product.interface";
+import type { CartItem } from "../../../types/interfaces/cartItem.interface";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,15 +27,15 @@ const ProductDetail = () => {
           const productData = response.data;
           setProduct(productData);
 
-          // Thiết lập hình ảnh chính
           setMainImage(productData.image);
 
-          // Thiết lập hình ảnh thumbnail
           const productImages =
             productData.images?.length > 0
               ? [
                   productData.image,
-                  ...productData.images.map((img: any) => img.url || img),
+                  ...productData.images.map((img: unknown) =>
+                    typeof img === "string" ? img : (img as { url: string }).url
+                  ),
                 ]
               : [productData.image];
 
@@ -79,19 +56,16 @@ const ProductDetail = () => {
     fetchProductDetail();
   }, [id]);
 
-  // Format giá tiền theo VND
   const formatPrice = (price: number) => {
     return `${price.toLocaleString("vi-VN")} đ`;
   };
 
-  // Format ngày từ timestamp
   const formatDate = (timestamp: number) => {
     if (!timestamp) return "N/A";
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString("vi-VN");
   };
 
-  // Xử lý thay đổi số lượng
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (value > 0) {
@@ -109,18 +83,41 @@ const ProductDetail = () => {
     }
   };
 
-  // Xử lý khi click vào thumbnail
   const handleThumbnailClick = (image: string) => {
     setMainImage(image);
   };
 
-  // Xử lý thêm vào giỏ hàng
   const handleAddToCart = () => {
+    if (!product) return;
+
+    // Lấy giỏ hàng hiện tại từ localStorage
+    const cartJson = localStorage.getItem("cart");
+    const cart: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
+
+    const existingItemIndex = cart.findIndex(
+      (item) => String(item.id) === String(product.id)
+    );
+
+    if (existingItemIndex !== -1) {
+      cart[existingItemIndex].quantity += quantity;
+    } else {
+      const newItem: CartItem = {
+        id: String(product.id),
+        name: product.name,
+        price: product.finalPrice,
+        quantity: quantity,
+        image: product.image || "",
+      };
+      cart.push(newItem);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
     message.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
 
-  // Xử lý mua ngay
   const handleBuyNow = () => {
+    handleAddToCart();
     message.info(`Chuyển đến trang thanh toán với ${quantity} sản phẩm`);
   };
 
@@ -183,10 +180,7 @@ const ProductDetail = () => {
                 className="object-contain"
                 rootClassName="max-w-full"
                 preview={{
-                  toolbarRender: (
-                    _,
-                    { transform: { scale }, actions: { onZoomIn, onZoomOut } }
-                  ) => (
+                  toolbarRender: (_, { actions: { onZoomIn, onZoomOut } }) => (
                     <>
                       <button
                         onClick={onZoomIn}
@@ -256,15 +250,6 @@ const ProductDetail = () => {
             )}
           </div>
 
-          {product.sold > 0 && (
-            <p className="text-sm text-gray-600 mb-4">Đã bán: {product.sold}</p>
-          )}
-
-          {/* Mã sản phẩm */}
-          <p className="text-sm text-gray-600 mb-4">
-            Mã sản phẩm: {product.code}
-          </p>
-
           {/* Quantity Selector */}
           <div className="flex items-center mb-6">
             <span className="mr-3 text-gray-700">Số lượng:</span>
@@ -275,19 +260,19 @@ const ProductDetail = () => {
               >
                 -
               </button>
-              <input
+              <Input
                 type="number"
                 value={quantity}
                 onChange={handleQuantityChange}
                 min="1"
                 className="w-12 text-center py-1 border-0 focus:outline-none"
               />
-              <button
+              <Button
                 onClick={increaseQuantity}
                 className="px-3 py-1 text-gray-600 hover:bg-gray-100"
               >
                 +
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -313,9 +298,9 @@ const ProductDetail = () => {
               <ShareAltOutlined className="mr-2" />
               Chia sẻ
             </button>
-            <button className="ml-2 p-2 border border-gray-300 rounded-full hover:border-gray-400">
+            <Button className="ml-2 p-2 border border-gray-300 rounded-full hover:border-gray-400">
               <HeartOutlined />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

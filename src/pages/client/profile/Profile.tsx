@@ -27,28 +27,17 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import type { UploadFile } from "antd/es/upload/interface";
 import { getCustomerProfile } from "../../../api/customerApi";
+import type { Customer } from "../../../types/interfaces/customer.interface";
 
 // Định nghĩa enum cho OrderStatus
 enum OrderStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  RETURNED = 'RETURNED',
-  REFUNDED = 'REFUNDED',
-}
-
-// Định nghĩa interface User
-interface User {
-  id?: string;
-  fullName: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  avatar?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  RETURNED = "RETURNED",
+  REFUNDED = "REFUNDED",
 }
 
 // Định nghĩa interface OrderItem
@@ -196,46 +185,44 @@ const mockOrders: Order[] = [
 ];
 
 const Profile: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [passwordModalVisible, setPasswordModalVisible] = useState<boolean>(false);
-  const [orderDetailModalVisible, setOrderDetailModalVisible] = useState<boolean>(false);
+  const [passwordModalVisible, setPasswordModalVisible] =
+    useState<boolean>(false);
+  const [orderDetailModalVisible, setOrderDetailModalVisible] =
+    useState<boolean>(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Kiểm tra nếu người dùng đã đăng nhập
     const token = localStorage.getItem("token");
     if (!token) {
       message.error("Vui lòng đăng nhập để xem thông tin tài khoản");
       navigate("/login");
       return;
     }
-    
-    // Gọi API lấy thông tin người dùng
+
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
         const response = await getCustomerProfile();
-        
+
         if (response?.data) {
           const userData = response.data;
           setUser(userData);
-          
-          // Cập nhật form với thông tin người dùng
+
           profileForm.setFieldsValue({
-            fullName: userData.fullName || '',
-            email: userData.email || '',
-            phone: userData.phone || '',
-            address: userData.address || '',
+            fullName: userData.fullName || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
           });
-          
-          // Thiết lập avatar nếu có
+
           if (userData.avatar) {
             setFileList([
               {
@@ -249,7 +236,9 @@ const Profile: React.FC = () => {
         }
       } catch (error) {
         console.error("Không thể lấy thông tin người dùng:", error);
-        message.error("Không thể tải thông tin người dùng. Vui lòng thử lại sau.");
+        message.error(
+          "Không thể tải thông tin người dùng. Vui lòng thử lại sau."
+        );
       } finally {
         setLoading(false);
       }
@@ -257,19 +246,15 @@ const Profile: React.FC = () => {
 
     fetchUserProfile();
 
-    // Tạm thời sử dụng dữ liệu giả cho đơn hàng
     setOrders(mockOrders);
     setLoadingOrders(false);
-
   }, [profileForm, navigate]);
 
   const handleProfileUpdate = async (values: any) => {
     try {
       setLoading(true);
 
-      // TODO: Thay thế bằng API cập nhật thông tin người dùng thực tế
       setTimeout(() => {
-        // Cập nhật user state với dữ liệu mới
         setUser({
           ...user!,
           ...values,
@@ -288,7 +273,6 @@ const Profile: React.FC = () => {
 
   const handlePasswordChange = async (values: any) => {
     try {
-      // TODO: Thay thế bằng API đổi mật khẩu thực tế
       setTimeout(() => {
         message.success("Đổi mật khẩu thành công");
         setPasswordModalVisible(false);
@@ -301,7 +285,6 @@ const Profile: React.FC = () => {
   };
 
   const handleCancelOrder = (orderId: string) => {
-    // TODO: Thay thế bằng API hủy đơn hàng thực tế
     const updatedOrders = orders.map((order) => {
       if (order.id === orderId) {
         return {

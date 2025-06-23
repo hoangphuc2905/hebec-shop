@@ -1,27 +1,18 @@
 import React, { useState, useEffect } from "react";
 import {
-  HeartOutlined,
   UserOutlined,
   LogoutOutlined,
   FileTextOutlined,
-  ShoppingOutlined,
+  ShoppingCartOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
-import { Dropdown, Menu, Avatar, message, Spin, Modal } from "antd";
+import { Dropdown, Avatar, message, Spin, Modal } from "antd";
 import type { MenuProps } from "antd";
 import logo from "../../../assets/logo.png";
 import { getCustomerProfile } from "../../../api/customerApi";
 import { logoutCustomer } from "../../../api/customerApi";
+import type { Customer } from "../../../types/interfaces/customer.interface";
 
-// Interface cho thông tin người dùng
-interface User {
-  fullName: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-}
-
-// Custom hook để lắng nghe token trong localStorage
 const useToken = (key: string) => {
   const [token, setToken] = useState<string | null>(() => {
     try {
@@ -33,7 +24,6 @@ const useToken = (key: string) => {
   });
 
   useEffect(() => {
-    // Lắng nghe sự kiện storage từ các tab/window khác
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key) {
         setToken(e.newValue);
@@ -50,24 +40,58 @@ const useToken = (key: string) => {
 };
 
 const Header: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Customer | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  // Sử dụng custom hook để theo dõi token
+  const [cartCount, setCartCount] = useState<number>(0); // New state for cart count
   const [token] = useToken("token");
   const navigate = useNavigate();
 
-  // Được gọi lại khi token thay đổi
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cartData = localStorage.getItem("cart");
+        if (cartData) {
+          const cartItems = JSON.parse(cartData);
+          setCartCount(cartItems.length);
+        } else {
+          setCartCount(0);
+        }
+      } catch (error) {
+        console.error("Error reading cart data:", error);
+        setCartCount(0);
+      }
+    };
+
+    updateCartCount();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cart") {
+        updateCartCount();
+      }
+    };
+
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("cart-updated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("cart-updated", handleCartUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (token) {
         try {
           setLoading(true);
-          // Gọi API lấy thông tin profile với token
           const profileResponse = await getCustomerProfile();
 
           if (profileResponse && profileResponse.data) {
-            // Lưu thông tin user vào state và localStorage
             const userData = profileResponse.data;
             setUser(userData);
             localStorage.setItem("user", JSON.stringify(userData));
@@ -75,20 +99,19 @@ const Header: React.FC = () => {
           }
         } catch (error) {
           console.error("Không thể lấy thông tin người dùng:", error);
-          // Nếu có lỗi, xóa token
           localStorage.removeItem("token");
           setIsLoggedIn(false);
         } finally {
           setLoading(false);
         }
       } else {
-        // Kiểm tra nếu có dữ liệu người dùng trong localStorage
         const savedUser = localStorage.getItem("user");
         if (savedUser) {
           try {
             setUser(JSON.parse(savedUser));
             setIsLoggedIn(true);
-          } catch (e) {
+          } catch (error) {
+            console.error("Lỗi khi phân tích dữ liệu người dùng:", error);
             localStorage.removeItem("user");
             setIsLoggedIn(false);
           }
@@ -100,16 +123,13 @@ const Header: React.FC = () => {
     };
 
     fetchUserProfile();
-  }, [token]); // Chạy lại khi token thay đổi
+  }, [token]); 
 
-  // Thêm listener cho sự kiện tùy chỉnh 'login-success'
   useEffect(() => {
     const handleLoginSuccess = () => {
-      // Tải lại thông tin người dùng
       fetchUserProfile();
     };
 
-    // Hàm để tải thông tin người dùng
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
@@ -189,55 +209,82 @@ const Header: React.FC = () => {
 
   return (
     <header className="w-full shadow-sm">
-      {/* Top header */}
-      <div className="flex justify-between items-center px-8 py-3 bg-white">
-        <Link to="/">
-          <img src={logo} alt="Hebec Logo" className="h-10" />
-        </Link>
+      {/* Top header - white background */}
+      <div className="container mx-auto px-16 py-4 bg-white flex justify-between items-center">
+        <div className="flex items-center">
+          <Link to="/">
+            <img src={logo} alt="Hebec Logo" className="h-10" />
+          </Link>
+        </div>
 
-        <span className="text-sm text-gray-500">Liên hệ tổng đài</span>
+        <div className="flex items-center">
+          <span className="text-sm text-gray-500">Liên hệ tổng đài</span>
+        </div>
       </div>
 
-      {/* Menu */}
-      <nav className="bg-green-600 text-white px-8">
-        <div className="flex justify-between items-center h-12">
-          {/* Left menu */}
-          <ul className="flex gap-6 text-sm font-semibold">
-            <li>
-              <Link to="/">Trang chủ</Link>
-            </li>
-            <li>
-              <Link to="/products">Hebec Shop</Link>
-            </li>
-            <li className="relative group">
-              <button className="focus:outline-none">
-                Danh mục sản phẩm ▾
-              </button>
-              {/* Dropdown nếu cần */}
-            </li>
-            <li className="relative group">
-              <button className="focus:outline-none">
-                Danh mục đồng phục ▾
-              </button>
-            </li>
-            <li>
-              <Link to="/tin-tuc">Tin tức</Link>
-            </li>
-            <li>
-              <Link to="/lien-he">Liên hệ</Link>
-            </li>
-            <li className="relative group">
-              <button className="focus:outline-none">Về chúng tôi ▾</button>
-            </li>
-          </ul>
+      {/* Menu navigation - green background */}
+      <nav className="bg-green-600 text-white">
+        <div className="container mx-auto px-8 flex justify-between items-center h-14">
+          {/* Menu chính - căn giữa */}
+          <div className="flex-1 flex justify-center h-full">
+            <ul className="flex gap-6 text-sm font-bold h-full items-center">
+              <li className="h-full flex items-center">
+                <Link
+                  to="/"
+                  className="px-2 flex items-center h-full hover:text-gray-200 transition-colors"
+                >
+                  Trang chủ
+                </Link>
+              </li>
+              <li className="h-full flex items-center">
+                <Link
+                  to="/products"
+                  className="px-2 flex items-center h-full hover:text-gray-200 transition-colors"
+                >
+                  Hebec Shop
+                </Link>
+              </li>
+              <li className="relative group h-full flex items-center">
+                <button className="px-2 focus:outline-none hover:text-gray-200 transition-colors flex items-center h-full">
+                  Danh mục sản phẩm ▾
+                </button>
+              </li>
+              <li className="relative group h-full flex items-center">
+                <button className="px-2 focus:outline-none hover:text-gray-200 transition-colors flex items-center h-full">
+                  Danh mục đồng phục ▾
+                </button>
+              </li>
+              <li className="h-full flex items-center">
+                <Link
+                  to="/tin-tuc"
+                  className="px-2 flex items-center h-full hover:text-gray-200 transition-colors"
+                >
+                  Tin tức
+                </Link>
+              </li>
+              <li className="h-full flex items-center">
+                <Link
+                  to="/lien-he"
+                  className="px-2 flex items-center h-full hover:text-gray-200 transition-colors"
+                >
+                  Liên hệ
+                </Link>
+              </li>
+              <li className="relative group h-full flex items-center">
+                <button className="px-2 focus:outline-none hover:text-gray-200 transition-colors flex items-center h-full">
+                  Về chúng tôi ▾
+                </button>
+              </li>
+            </ul>
+          </div>
 
-          {/* Right icons */}
-          <div className="flex gap-4 items-center text-white">
+          {/* User và giỏ hàng - bên phải */}
+          <div className="flex gap-4 items-center h-full">
             <div className="relative">
               <Link to="/cart">
-                <HeartOutlined className="text-lg" />
+                <ShoppingCartOutlined className="text-lg text-white hover:text-gray-200 transition-colors" />
                 <span className="absolute -top-2 -right-2 bg-white text-green-600 text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  0
+                  {cartCount}
                 </span>
               </Link>
             </div>
@@ -245,28 +292,32 @@ const Header: React.FC = () => {
             {loading ? (
               <Spin size="small" />
             ) : isLoggedIn && user ? (
-              <div className="flex items-center">
-                <Dropdown
-                  menu={{ items: userMenuItems }}
-                  trigger={["click"]}
-                  placement="bottomRight"
-                >
-                  <div className="flex items-center cursor-pointer">
-                    <span className="mr-2 text-sm">{user.fullName}</span>
-                    {user.avatar ? (
-                      <Avatar size="small" src={user.avatar} />
-                    ) : (
-                      <Avatar size="small" icon={<UserOutlined />} />
-                    )}
-                  </div>
-                </Dropdown>
-              </div>
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={["click"]}
+                placement="bottomRight"
+              >
+                <div className="flex items-center cursor-pointer h-full">
+                  <span className="mr-2 text-sm text-white">
+                    {user.fullName}
+                  </span>
+                  <Avatar
+                    size="small"
+                    icon={<UserOutlined />}
+                    className="bg-white text-green-600"
+                  />
+                </div>
+              </Dropdown>
             ) : (
               <Link
                 to="/login"
-                className="flex items-center hover:text-gray-300 transition"
+                className="flex items-center text-white hover:text-gray-200 transition h-full"
               >
-                <UserOutlined className="text-lg" />
+                <Avatar
+                  size="small"
+                  icon={<UserOutlined />}
+                  className="bg-white text-green-600"
+                />
               </Link>
             )}
           </div>

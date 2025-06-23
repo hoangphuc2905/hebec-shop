@@ -6,57 +6,52 @@ import {
   LeftOutlined,
   ShoppingOutlined,
 } from "@ant-design/icons";
-import { Empty, Button, InputNumber, Spin } from "antd";
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+import { Button, InputNumber, Spin } from "antd";
+import type { CartItem } from "../../../types/interfaces/cartItem.interface";
 
 const Cart: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
+  const saveCartToLocalStorage = (items: CartItem[]) => {
+    localStorage.setItem("cart", JSON.stringify(items));
+    window.dispatchEvent(new Event("cart-updated"));
+  };
+
   useEffect(() => {
-    // Mô phỏng call API lấy giỏ hàng từ server/local storage
-    setTimeout(() => {
-      // Thêm sản phẩm mẫu vào giỏ hàng
-      setCartItems([
-        {
-          id: "1",
-          name: "143 Món Khai Vị Hấp Dẫn",
-          price: 37000,
-          quantity: 1,
-          image:
-            "https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg",
-        },
-        {
-          id: "2",
-          name: "Trẻ Lâu Đẹp Dáng",
-          price: 82000,
-          quantity: 2,
-          image:
-            "https://salt.tikicdn.com/cache/280x280/ts/product/65/ae/44/73256656d447425db7510a9ac5d84a12.jpg",
-        },
-      ]);
-      setLoading(false);
-    }, 500);
+    // Lấy giỏ hàng từ localStorage
+    const loadCart = () => {
+      try {
+        const savedCart = localStorage.getItem("cart");
+        if (savedCart) {
+          setCartItems(JSON.parse(savedCart));
+        }
+      } catch (error) {
+        console.error("Error loading cart from localStorage:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCart();
   }, []);
 
   const handleQuantityChange = (id: string, quantity: number) => {
     if (quantity < 1) return;
 
-    setCartItems((prevItems) =>
-      prevItems.map((item) => (item.id === id ? { ...item, quantity } : item))
+    const updatedItems = cartItems.map((item) =>
+      item.id === id ? { ...item, quantity } : item
     );
+
+    setCartItems(updatedItems);
+    saveCartToLocalStorage(updatedItems);
   };
 
   const handleRemoveItem = (id: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+    const updatedItems = cartItems.filter((item) => item.id !== id);
+    setCartItems(updatedItems);
+    saveCartToLocalStorage(updatedItems);
   };
 
   const calculateTotal = () => {
@@ -66,12 +61,10 @@ const Cart: React.FC = () => {
     );
   };
 
-  // Format giá tiền theo VND
   const formatPrice = (price: number) => {
     return `${price.toLocaleString("vi-VN")} đ`;
   };
 
-  // Xử lý khi nhấn nút tiến hành đặt hàng
   const handleProceedToOrder = () => {
     navigate("/order");
   };
@@ -127,7 +120,7 @@ const Cart: React.FC = () => {
                         />
                         <div>
                           <Link
-                            to={`/san-pham/${item.id}`}
+                            to={`/products/${item.id}`}
                             className="font-medium text-gray-800 hover:text-green-600"
                           >
                             {item.name}
@@ -154,12 +147,12 @@ const Cart: React.FC = () => {
                       {formatPrice(item.price * item.quantity)}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <button
+                      <Button
                         onClick={() => handleRemoveItem(item.id)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <DeleteOutlined />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
