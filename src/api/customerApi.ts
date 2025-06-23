@@ -7,6 +7,7 @@ const axiosClient = axios.create({
     "Content-Type": "application/json",
     namespace: "hoangphuc",
     lang: "hoangphuc",
+    version: "0.0.89",
   },
 });
 
@@ -24,6 +25,23 @@ export const registerCustomer = async (data: any) => {
 export const loginCustomer = async (data: any) => {
   try {
     const response = await axiosClient.post("/customer/auth/login", data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};
+
+// Hàm gọi API đăng xuất
+export const logoutCustomer = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axiosClient.post("/customer/auth/logout", null, {
+      headers: {
+        token: token || "",
+      },
+    });
+    // Xoá token khỏi localStorage
+    localStorage.removeItem("token");
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Lỗi không xác định." };
@@ -80,11 +98,15 @@ export const addCustomer = async (data: any) => {
 export const updateCustomer = async (customerId: string, data: any) => {
   try {
     const token = localStorage.getItem("adminToken");
-    const response = await axiosClient.put(`/store/customer/${customerId}`, data, {
-      headers: {
-        token: token || "",
-      },
-    });
+    const response = await axiosClient.put(
+      `/store/customer/${customerId}`,
+      data,
+      {
+        headers: {
+          token: token || "",
+        },
+      }
+    );
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Lỗi không xác định." };

@@ -8,8 +8,10 @@ import {
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { Dropdown, Menu, Avatar, message, Spin, Modal } from "antd";
+import type { MenuProps } from "antd";
 import logo from "../../../assets/logo.png";
 import { getCustomerProfile } from "../../../api/customerApi";
+import { logoutCustomer } from "../../../api/customerApi";
 
 // Interface cho thông tin người dùng
 interface User {
@@ -19,15 +21,14 @@ interface User {
   avatar?: string;
 }
 
-// Custom hook để lắng nghe sự thay đổi trong localStorage
-const useLocalStorage = (key: string, initialValue: any) => {
-  const [storedValue, setStoredValue] = useState(() => {
+// Custom hook để lắng nghe token trong localStorage
+const useToken = (key: string) => {
+  const [token, setToken] = useState<string | null>(() => {
     try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      return window.localStorage.getItem(key);
     } catch (error) {
       console.error(error);
-      return initialValue;
+      return null;
     }
   });
 
@@ -35,11 +36,7 @@ const useLocalStorage = (key: string, initialValue: any) => {
     // Lắng nghe sự kiện storage từ các tab/window khác
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key) {
-        try {
-          setStoredValue(e.newValue ? JSON.parse(e.newValue) : null);
-        } catch (error) {
-          console.error(error);
-        }
+        setToken(e.newValue);
       }
     };
 
@@ -49,7 +46,7 @@ const useLocalStorage = (key: string, initialValue: any) => {
     };
   }, [key]);
 
-  return [storedValue, setStoredValue];
+  return [token, setToken];
 };
 
 const Header: React.FC = () => {
@@ -57,7 +54,7 @@ const Header: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   // Sử dụng custom hook để theo dõi token
-  const [token] = useLocalStorage("token", null);
+  const [token] = useToken("token");
   const navigate = useNavigate();
 
   // Được gọi lại khi token thay đổi
@@ -67,7 +64,7 @@ const Header: React.FC = () => {
         try {
           setLoading(true);
           // Gọi API lấy thông tin profile với token
-          const profileResponse = await getCustomerProfile(token);
+          const profileResponse = await getCustomerProfile();
 
           if (profileResponse && profileResponse.data) {
             // Lưu thông tin user vào state và localStorage
@@ -108,11 +105,8 @@ const Header: React.FC = () => {
   // Thêm listener cho sự kiện tùy chỉnh 'login-success'
   useEffect(() => {
     const handleLoginSuccess = () => {
-      const newToken = localStorage.getItem("token");
-      if (newToken) {
-        // Tải lại thông tin người dùng
-        fetchUserProfile(newToken);
-      }
+      // Tải lại thông tin người dùng
+      fetchUserProfile();
     };
 
     // Hàm để tải thông tin người dùng
@@ -146,32 +140,52 @@ const Header: React.FC = () => {
       okText: "Đăng xuất",
       cancelText: "Hủy",
       okType: "danger",
-      onOk: () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
-        setIsLoggedIn(false);
-        message.success("Đăng xuất thành công!");
-        navigate("/");
+      onOk: async () => {
+        try {
+          setLoading(true);
+          // Gọi API logout
+          await logoutCustomer();
+
+          // Sau khi logout thành công, xóa dữ liệu cục bộ
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUser(null);
+          setIsLoggedIn(false);
+
+          message.success("Đăng xuất thành công!");
+          navigate("/");
+        } catch (error) {
+          console.error("Lỗi khi đăng xuất:", error);
+          message.error("Đăng xuất thất bại. Vui lòng thử lại sau.");
+        } finally {
+          setLoading(false);
+        }
       },
     });
   };
 
-  // Menu dropdown cho người dùng đã đăng nhập
-  const userMenu = (
-    <Menu>
-      <Menu.Item key="profile" icon={<UserOutlined />}>
-        <Link to="/profile">Thông tin cá nhân</Link>
-      </Menu.Item>
-      <Menu.Item key="orders" icon={<FileTextOutlined />}>
-        <Link to="/tai-khoan?tab=orders">Lịch sử đơn hàng</Link>
-      </Menu.Item>
-      <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
-        Đăng xuất
-      </Menu.Item>
-    </Menu>
-  );
+  // Menu dropdown cho người dùng đã đăng nhập (cập nhật theo cách mới của Ant Design v5)
+  const userMenuItems: MenuProps["items"] = [
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: <Link to="/profile">Thông tin cá nhân</Link>,
+    },
+    {
+      key: "orders",
+      icon: <FileTextOutlined />,
+      label: <Link to="/tai-khoan?tab=orders">Lịch sử đơn hàng</Link>,
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Đăng xuất",
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <header className="w-full shadow-sm">
@@ -233,7 +247,7 @@ const Header: React.FC = () => {
             ) : isLoggedIn && user ? (
               <div className="flex items-center">
                 <Dropdown
-                  overlay={userMenu}
+                  menu={{ items: userMenuItems }}
                   trigger={["click"]}
                   placement="bottomRight"
                 >

@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     orders: "/admin/orders",
     "product-list": "/admin/products",
     products: "/admin/products",
-    "product-categories": "/admin/product-categories",
+    "product-categories": "/admin/categories",
     "product-import": "/admin/product-import",
     campaigns: "/admin/campaigns",
     promotions: "/admin/promotions",
@@ -135,7 +135,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     getItem("Sản phẩm", "products", <ShoppingOutlined />, [
       getItem("Danh sách sản phẩm", "product-list"),
       getItem("Danh mục sản phẩm", "product-categories"),
-      getItem("Nhập hàng", "product-import"),
     ]),
     getItem("Chiến dịch", "campaigns", <RocketOutlined />, [
       getItem("Khuyến mãi", "promotions"),

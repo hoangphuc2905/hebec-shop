@@ -29,7 +29,6 @@ import { getCustomerList } from "../../../api/customerApi";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
-const { TabPane } = Tabs;
 
 // Interface cho Customer
 interface Customer {
@@ -135,48 +134,110 @@ const AdminCustomerList: React.FC = () => {
         // Gọi API
         const response = await getCustomerList(params);
 
-        if (response && response.data) {
-          // Map dữ liệu API thành đúng cấu trúc Customer
-          const fetchedCustomers = response.data.map((item: any) => ({
-            id: item.id || item._id,
+        // Log response để debug
+        console.log("API Response:", response);
+
+        let fetchedCustomers: Customer[] = [];
+        let totalCustomers = 0;
+
+        // Kiểm tra cấu trúc response và xử lý dữ liệu phù hợp
+        if (response && response.data && Array.isArray(response.data)) {
+          // Trường hợp 1: response.data là mảng
+          fetchedCustomers = response.data.map((item: any) => ({
+            id: item.id || item._id || "",
             name: item.name || "Khách hàng mới",
             phone: item.phone || "",
             birthday: item.birthday || "",
             group: item.group?.name || "",
-            createdAt: dayjs(item.createdAt).format("DD/MM/YYYY") || "",
+            createdAt: item.createdAt
+              ? dayjs(item.createdAt).format("DD/MM/YYYY")
+              : "",
             source: item.source || "",
             points: item.points || 0,
             referrals: item.referrals || 0,
             followOA: item.followOA || false,
           }));
-
-          setCustomers(fetchedCustomers);
-          setTotal(response.pagination?.total || fetchedCustomers.length);
-
-          // Lấy danh sách nguồn khách hàng nếu có
-          if (response.sources) {
-            setSources(
-              response.sources.map((src: any) => ({
-                id: src.id || src._id,
-                name: src.name,
-              }))
-            );
-          } else {
-            // Nếu API không trả về sources, để mảng rỗng
-            setSources([]);
-          }
+          totalCustomers =
+            response.pagination?.total || fetchedCustomers.length;
+        } else if (
+          response &&
+          response.customers &&
+          Array.isArray(response.customers)
+        ) {
+          // Trường hợp 2: response.customers là mảng
+          fetchedCustomers = response.customers.map((item: any) => ({
+            id: item.id || item._id || "",
+            name: item.name || "Khách hàng mới",
+            phone: item.phone || "",
+            birthday: item.birthday || "",
+            group: item.group?.name || "",
+            createdAt: item.createdAt
+              ? dayjs(item.createdAt).format("DD/MM/YYYY")
+              : "",
+            source: item.source || "",
+            points: item.points || 0,
+            referrals: item.referrals || 0,
+            followOA: item.followOA || false,
+          }));
+          totalCustomers = response.total || fetchedCustomers.length;
+        } else if (
+          response &&
+          response.data &&
+          response.data.customers &&
+          Array.isArray(response.data.customers)
+        ) {
+          // Trường hợp 3: response.data.customers là mảng
+          fetchedCustomers = response.data.customers.map((item: any) => ({
+            id: item.id || item._id || "",
+            name: item.name || "Khách hàng mới",
+            phone: item.phone || "",
+            birthday: item.birthday || "",
+            group: item.group?.name || "",
+            createdAt: item.createdAt
+              ? dayjs(item.createdAt).format("DD/MM/YYYY")
+              : "",
+            source: item.source || "",
+            points: item.points || 0,
+            referrals: item.referrals || 0,
+            followOA: item.followOA || false,
+          }));
+          totalCustomers = response.data.total || fetchedCustomers.length;
         } else {
-          // Trường hợp response không có data
-          setCustomers([]);
-          setTotal(0);
+          console.warn("Không xác định được cấu trúc dữ liệu API", response);
+          message.warning("Cấu trúc dữ liệu không đúng định dạng");
+        }
+
+        setCustomers(fetchedCustomers);
+        setTotal(totalCustomers);
+
+        // Lấy danh sách nguồn khách hàng nếu có
+        if (response && response.sources && Array.isArray(response.sources)) {
+          setSources(
+            response.sources.map((src: any) => ({
+              id: src.id || src._id || "",
+              name: src.name || "",
+            }))
+          );
+        } else if (
+          response &&
+          response.data &&
+          response.data.sources &&
+          Array.isArray(response.data.sources)
+        ) {
+          setSources(
+            response.data.sources.map((src: any) => ({
+              id: src.id || src._id || "",
+              name: src.name || "",
+            }))
+          );
+        } else {
+          setSources([]);
         }
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu khách hàng:", error);
         message.error(
           "Không thể tải dữ liệu khách hàng. Vui lòng thử lại sau."
         );
-
-        // Đặt mảng rỗng thay vì dữ liệu mẫu
         setCustomers([]);
         setTotal(0);
       } finally {
@@ -298,6 +359,46 @@ const AdminCustomerList: React.FC = () => {
         <Button type="primary" className="update-button">
           Cập nhật
         </Button>
+      ),
+    },
+  ];
+
+  // Items cho Tabs component (thay thế TabPane)
+  const tabItems = [
+    {
+      key: "withInfo",
+      label: "Khách có thông tin",
+      children: (
+        <Table
+          rowSelection={{
+            type: "checkbox",
+            ...rowSelection,
+          }}
+          columns={columns}
+          dataSource={customers}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+          className="customers-table"
+        />
+      ),
+    },
+    {
+      key: "withoutInfo",
+      label: "Khách chưa có thông tin",
+      children: (
+        <Table
+          rowSelection={{
+            type: "checkbox",
+            ...rowSelection,
+          }}
+          columns={columns}
+          dataSource={customers}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+          className="customers-table"
+        />
       ),
     },
   ];
@@ -437,40 +538,13 @@ const AdminCustomerList: React.FC = () => {
           <div className="customer-count">Tổng số lượng: {total} khách</div>
         </div>
 
+        {/* Thay thế TabPane bằng items */}
         <Tabs
           activeKey={filterOptions.tab}
           onChange={handleTabChange}
           className="customer-tabs"
-        >
-          <TabPane tab="Khách có thông tin" key="withInfo">
-            <Table
-              rowSelection={{
-                type: "checkbox",
-                ...rowSelection,
-              }}
-              columns={columns}
-              dataSource={customers}
-              rowKey="id"
-              loading={loading}
-              pagination={false}
-              className="customers-table"
-            />
-          </TabPane>
-          <TabPane tab="Khách chưa có thông tin" key="withoutInfo">
-            <Table
-              rowSelection={{
-                type: "checkbox",
-                ...rowSelection,
-              }}
-              columns={columns}
-              dataSource={customers}
-              rowKey="id"
-              loading={loading}
-              pagination={false}
-              className="customers-table"
-            />
-          </TabPane>
-        </Tabs>
+          items={tabItems}
+        />
 
         <div className="pagination-container">
           <div className="pagination-info">Tổng {total} dòng</div>
@@ -478,13 +552,19 @@ const AdminCustomerList: React.FC = () => {
             <Button
               className="pagination-prev"
               disabled={filterOptions.page === 1}
+              onClick={() => handlePageChange(filterOptions.page - 1)}
             >
               &lt;
             </Button>
             <span className="pagination-current">{filterOptions.page}</span>
-            <Button className="pagination-next">&gt;</Button>
+            <Button
+              className="pagination-next"
+              onClick={() => handlePageChange(filterOptions.page + 1)}
+            >
+              &gt;
+            </Button>
             <Select
-              value={`${filterOptions.pageSize} / trang`}
+              value={`${filterOptions.pageSize}`}
               className="pagination-size"
               onChange={(value) => handlePageChange(1, parseInt(value))}
             >

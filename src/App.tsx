@@ -17,6 +17,8 @@ import ProfilePage from "./pages/client/profile/Profile";
 import AdminProducts from "./pages/admin/product/ProductList";
 import AdminLogin from "./pages/admin/auth/Login";
 import CustomerPage from "./pages/admin/customer/CustomerList";
+import AdminCategory from "./pages/admin/category/CategoryList";
+import AdminOrder from "./pages/admin/order/OrderList";
 
 function App() {
   return (
@@ -41,7 +43,10 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<div>Admin Dashboard</div>} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="categories" element={<AdminCategory />} />
           <Route path="customers" element={<CustomerPage />} />
+          <Route path="orders" element={<AdminOrder />} />
+          {/* Thêm các route khác cho admin nếu cần */}
         </Route>
 
         {/* Route mặc định */}
