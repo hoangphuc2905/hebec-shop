@@ -34,18 +34,23 @@ export const loginCustomer = async (data: any) => {
 export const logoutCustomer = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await axiosClient.post("/customer/auth/logout", null, {
-      headers: {
-        token: token || "",
-      },
-    });
-    // Xoá token khỏi localStorage
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("cart");
+    if (!token) {
+      throw new Error("Không tìm thấy token");
+    }
+
+    const response = await axiosClient.post(
+      "/customer/auth/logout",
+      {}, // Empty body but using object instead of null
+      {
+        headers: {
+          token: token,
+        },
+      }
+    );
     return response.data;
   } catch (error: any) {
-    throw error.response?.data || { message: "Lỗi không xác định." };
+    console.error("Logout API error:", error);
+    throw error.response?.data || { message: "Lỗi khi đăng xuất" };
   }
 };
 

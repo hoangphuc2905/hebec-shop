@@ -4,9 +4,7 @@ import {
   LeftOutlined,
   RightOutlined,
   SearchOutlined,
-  AppstoreOutlined,
   FilterOutlined,
-  UnorderedListOutlined,
 } from "@ant-design/icons";
 import { getProducts } from "../../../api/productApi";
 import {
@@ -27,7 +25,6 @@ const CategoryProducts = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterMobileVisible, setFilterMobileVisible] =
     useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   useEffect(() => {
@@ -196,26 +193,8 @@ const CategoryProducts = () => {
               className="w-full"
               size="large"
             />
-          </div>
-
+          </div>{" "}
           <div className="flex gap-2">
-            <div className="hidden md:flex gap-1">
-              <Button
-                icon={<AppstoreOutlined />}
-                onClick={() => setViewMode("grid")}
-                type={viewMode === "grid" ? "primary" : "default"}
-                size="large"
-                className={viewMode === "grid" ? "bg-green-600" : ""}
-              />
-              <Button
-                icon={<UnorderedListOutlined />}
-                onClick={() => setViewMode("list")}
-                type={viewMode === "list" ? "primary" : "default"}
-                size="large"
-                className={viewMode === "list" ? "bg-green-600" : ""}
-              />
-            </div>
-
             <Button
               icon={<FilterOutlined />}
               onClick={() => setFilterMobileVisible(true)}
@@ -251,75 +230,40 @@ const CategoryProducts = () => {
                       <RightOutlined />
                     </Button>
                   </div>
-                </div>
-
+                </div>{" "}
                 {/* Products Grid */}
-                {viewMode === "grid" ? (
-                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {category.products.map((product) => (
-                      <Link
-                        key={product.id}
-                        to={`/products/${product.id}`}
-                        className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div className="overflow-hidden border-b">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {category.products.map((product) => (
+                    <Link
+                      key={product.id}
+                      to={`/products/${product.id}`}
+                      className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="overflow-hidden border-b">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-sm font-medium text-gray-800 group-hover:text-green-600 line-clamp-2 h-10 mb-2">
+                          {product.name}
+                        </h3>
+                        <div className="font-medium text-green-600 text-lg">
+                          {formatPrice(product.finalPrice)}
                         </div>
-                        <div className="p-4">
-                          <h3 className="text-sm font-medium text-gray-800 group-hover:text-green-600 line-clamp-2 h-10 mb-2">
-                            {product.name}
-                          </h3>
-                          <div className="font-medium text-green-600 text-lg">
-                            {formatPrice(product.finalPrice)}
+                        {typeof product.sold !== "undefined" && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Đã bán: {product.sold || 0}
                           </div>
-                          {product.sold && product.sold > 0 && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Đã bán: {product.sold}
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {category.products.map((product) => (
-                      <Link
-                        key={product.id}
-                        to={`/products/${product.id}`}
-                        className="flex gap-4 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow p-3 group"
-                      >
-                        <div className="w-32 h-32 overflow-hidden">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-800 group-hover:text-green-600 mb-2">
-                            {product.name}
-                          </h3>
-                          <div className="font-medium text-green-600 text-lg">
-                            {formatPrice(product.finalPrice)}
-                          </div>
-                          {product.sold && product.sold > 0 && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              Đã bán: {product.sold}
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>{" "}
                 {/* "Xem thêm" link nếu có nhiều sản phẩm */}
-                {category.products.length > (viewMode === "grid" ? 8 : 5) && (
+                {category.products.length > 8 && (
                   <div className="text-center mt-6">
                     <Link
                       to={`/danh-muc/${category.slug}`}

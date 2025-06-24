@@ -6,34 +6,29 @@ import {
   Space,
   Tag,
   message,
-  Card,
-  Row,
-  Col,
   DatePicker,
   Select,
   Switch,
-  Tooltip,
-  Tabs,
 } from "antd";
 import {
   SearchOutlined,
   PlusOutlined,
   FileExcelOutlined,
-  FilterOutlined,
-  UpOutlined,
   DownOutlined,
-  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import "./OrderList.css";
 import dayjs from "dayjs";
 import locale from "antd/es/date-picker/locale/vi_VN";
 import { getOrderList } from "../../../api/orderApi";
+import type {
+  Order,
+  FilterOptions,
+} from "../../../types/interfaces/order.interface";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-// Define order status types and their display properties
 const ORDER_STATUSES = [
   { key: "all", text: "Tất cả", color: "" },
   { key: "new", text: "Đã đặt hàng", color: "#20a4a2" },
@@ -45,40 +40,11 @@ const ORDER_STATUSES = [
   { key: "returned", text: "Hoàn trả", color: "#eb2f96" },
 ];
 
-// Interface cho Order
-interface Order {
-  id: string;
-  code: string;
-  customerName: string;
-  phone: string;
-  paymentMethod: string;
-  status: string;
-  totalAmount: number;
-  shippingFee: number;
-  pointsUsed: number;
-  discount: number;
-  finalAmount: number;
-  createdAt: string;
-  shipmentInfo?: string;
-  invoiceRequired: boolean;
-}
-
-// Interface cho các tùy chọn tìm kiếm
-interface FilterOptions {
-  search: string;
-  startDate: string | null;
-  endDate: string | null;
-  deliveryMethod: string;
-  invoiceRequired: boolean;
-  page: number;
-  pageSize: number;
-  status: string;
-}
-
 const AdminOrderList: React.FC = () => {
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     search: "",
@@ -114,63 +80,135 @@ const AdminOrderList: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Các phần giữ nguyên như code bạn đã có
-        // ...
+        const params: Record<string, unknown> = {
+          page: filterOptions.page,
+          limit: filterOptions.pageSize,
+          type: "ORDER",
+        };
 
-        // Mô phỏng dữ liệu cho phát triển UI
-        const mockOrders: Order[] = Array(10)
-          .fill(null)
-          .map((_, index) => ({
-            id: `order-${index + 1}`,
-            code: `DH-${100000 + index}`,
-            customerName: `Khách hàng ${index + 1}`,
-            phone: `098765432${index % 10}`,
-            paymentMethod: index % 2 === 0 ? "COD" : "Banking",
-            status: ORDER_STATUSES[index % 8].key,
-            totalAmount: 500000 + index * 50000,
-            shippingFee: 30000,
-            pointsUsed: index * 10,
-            discount: 10000 * (index % 5),
-            finalAmount:
-              500000 + index * 50000 + 30000 - 10000 * (index % 5),
-            createdAt: dayjs()
-              .subtract(index, "day")
-              .format("DD/MM/YYYY HH:mm"),
-            shipmentInfo:
-              index % 3 === 0
-                ? "Giao hàng tận nơi"
-                : "Lấy tại cửa hàng",
-            invoiceRequired: index % 4 === 0,
-          }));
+        // Thêm search nếu có
+        if (filterOptions.search.trim()) {
+          params.search = filterOptions.search.trim();
+        }
 
-        setOrders(mockOrders);
-        setTotal(100);
+        // Thêm filter theo trạng thái (trừ 'all')
+        if (filterOptions.status !== "all") {
+          params.status = filterOptions.status.toUpperCase();
+        }
 
-        // Mô phỏng số lượng theo trạng thái
-        setStatusCounts({
-          all: 100,
-          new: 20,
-          confirmed: 15,
-          processing: 10,
-          shipping: 5,
-          completed: 30,
-          cancelled: 15,
-          returned: 5,
-        });
+        // Thêm filter theo ngày
+        if (filterOptions.startDate && filterOptions.endDate) {
+          params.startDate = filterOptions.startDate;
+          params.endDate = filterOptions.endDate;
+        }
 
-        // Mô phỏng thống kê
-        setOrderStats({
-          totalValue: 10500000,
-          totalShipping: 600000,
-          totalPoints: 550,
-          totalAmount: 11000000,
-          totalDiscount: 150000,
-        });
-      } catch (error) {
+        // Thêm filter theo delivery method
+        if (filterOptions.deliveryMethod) {
+          params.deliveryMethod = filterOptions.deliveryMethod;
+        }
+
+        // Thêm filter theo invoice required
+        if (filterOptions.invoiceRequired) {
+          params.invoiceRequired = filterOptions.invoiceRequired;
+        }
+
+        const response = await getOrderList(params);
+
+        if (response && response.status) {
+          const orderList = response.data?.orders || [];
+          setOrders(orderList);
+
+          // Tính tổng số từ response.data.total
+          const totalCount = response.data?.total || orderList.length;
+          setTotal(totalCount);
+
+          // Tính toán status counts từ danh sách đơn hàng
+          const counts = {
+            all: totalCount,
+            new: 0,
+            confirmed: 0,
+            processing: 0,
+            shipping: 0,
+            completed: 0,
+            cancelled: 0,
+            returned: 0,
+            pending: 0, // Thêm PENDING status
+          };
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          orderList.forEach((order: any) => {
+            const status = order.status?.toLowerCase();
+            if (status === "pending") counts.new++; // Map PENDING -> new
+            else if (
+              status &&
+              (Object.keys(counts) as Array<keyof typeof counts>).includes(
+                status as keyof typeof counts
+              )
+            ) {
+              counts[status as keyof typeof counts]++;
+            }
+          });
+          setStatusCounts(counts);
+
+          // Tính toán statistics từ danh sách đơn hàng
+          const stats = orderList.reduce(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (acc: any, order: any) => {
+              acc.totalValue += order.totalMoney || 0;
+              acc.totalShipping += order.shipFee || 0;
+              acc.totalPoints += order.paidPoint || 0;
+              acc.totalAmount += order.moneyFinal || 0;
+              acc.totalDiscount += order.moneyDiscount || 0;
+              return acc;
+            },
+            {
+              totalValue: 0,
+              totalShipping: 0,
+              totalPoints: 0,
+              totalAmount: 0,
+              totalDiscount: 0,
+            }
+          );
+
+          setOrderStats(stats);
+        } else {
+          // Fallback nếu API không trả về đúng format
+          console.warn("API response không có status=true:", response);
+          setOrders([]);
+          setTotal(0);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
         console.error("Lỗi khi lấy dữ liệu đơn hàng:", error);
-        message.error("Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.");
+
+        // Hiển thị thông báo lỗi cụ thể từ API
+        const errorMessage =
+          error.message ||
+          "Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.";
+        message.error(errorMessage);
+
         setOrders([]);
         setTotal(0);
+
+        // Reset các counts và stats về 0
+        setStatusCounts({
+          all: 0,
+          new: 0,
+          confirmed: 0,
+          processing: 0,
+          shipping: 0,
+          completed: 0,
+          cancelled: 0,
+          returned: 0,
+        });
+
+        setOrderStats({
+          totalValue: 0,
+          totalShipping: 0,
+          totalPoints: 0,
+          totalAmount: 0,
+          totalDiscount: 0,
+        });
       } finally {
         setLoading(false);
       }
@@ -179,59 +217,20 @@ const AdminOrderList: React.FC = () => {
     fetchData();
   }, [filterOptions]);
 
-  // Xử lý tìm kiếm
-  const handleSearch = () => {
-    setFilterOptions({ ...filterOptions, page: 1 });
-  };
-
-  // Xử lý thay đổi ngày tạo
-  const handleDateChange = (dates: any) => {
-    if (dates) {
-      const [start, end] = dates;
-      setFilterOptions({
-        ...filterOptions,
-        startDate: start ? start.format("YYYY-MM-DD") : null,
-        endDate: end ? end.format("YYYY-MM-DD") : null,
-      });
-    } else {
-      setFilterOptions({
-        ...filterOptions,
-        startDate: null,
-        endDate: null,
-      });
-    }
-  };
-
-  // Xử lý thay đổi tab
-  const handleStatusChange = (status: string) => {
-    setFilterOptions({ ...filterOptions, status, page: 1 });
-  };
-
-  // Xử lý thay đổi trang
-  const handlePageChange = (page: number, pageSize?: number) => {
-    setFilterOptions({
-      ...filterOptions,
-      page,
-      pageSize: pageSize || filterOptions.pageSize,
-    });
-  };
-
-  // Xử lý chọn hàng
-  const rowSelection = {
-    onChange: (selectedRowKeys: React.Key[]) => {
-      setSelectedRows(selectedRowKeys as string[]);
-    },
+  // Format date từ timestamp
+  const formatDate = (timestamp: number) => {
+    return dayjs(timestamp * 1000).format("DD/MM/YYYY HH:mm");
   };
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN").format(amount);
+    return new Intl.NumberFormat("vi-VN").format(amount) + " đ";
   };
 
-  // Columns của Table
+  // Columns của Table - cập nhật theo dữ liệu thực tế
   const columns = [
     {
-      title: "Mã giao dịch",
+      title: "Mã đơn hàng",
       dataIndex: "code",
       key: "code",
       render: (text: string, record: Order) => (
@@ -242,13 +241,16 @@ const AdminOrderList: React.FC = () => {
     },
     {
       title: "Khách hàng",
-      dataIndex: "customerName",
       key: "customerName",
-    },
-    {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (_: any, record: Order) => (
+        <div>
+          <div>{record.customer?.fullName || record.receiverName}</div>
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            {record.customer?.phone || record.receiverPhone}
+          </div>
+        </div>
+      ),
     },
     {
       title: "Thanh toán",
@@ -256,36 +258,58 @@ const AdminOrderList: React.FC = () => {
       key: "paymentMethod",
     },
     {
-      title: "Trạng thái đơn",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        const statusInfo = ORDER_STATUSES.find(
-          (s) => s.key === status
-        ) || ORDER_STATUSES[0];
+        // Map API status to display status
+        let displayStatus = status?.toLowerCase();
+        if (displayStatus === "pending") displayStatus = "new";
+
+        const statusInfo =
+          ORDER_STATUSES.find((s) => s.key === displayStatus) ||
+          ORDER_STATUSES[0];
         return (
-          <Tag
-            color={statusInfo.color || "default"}
-            className="status-tag"
-          >
+          <Tag color={statusInfo.color || "default"} className="status-tag">
             {statusInfo.text}
           </Tag>
         );
       },
     },
     {
-      title: "Thông tin vận chuyển",
-      dataIndex: "shipmentInfo",
-      key: "shipmentInfo",
+      title: "Địa chỉ giao hàng",
+      dataIndex: "receiverAddress",
+      key: "receiverAddress",
+      render: (text: string) => (
+        <div
+          style={{
+            maxWidth: "200px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {text}
+        </div>
+      ),
     },
     {
-      title: "Ngày tạo đơn",
+      title: "Tổng tiền",
+      dataIndex: "moneyFinal",
+      key: "moneyFinal",
+      render: (amount: number) => (
+        <span style={{ fontWeight: "bold" }}>{formatCurrency(amount)}</span>
+      ),
+    },
+    {
+      title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
+      render: (timestamp: number) => formatDate(timestamp),
     },
     {
-      title: "",
+      title: "Thao tác",
       key: "action",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: Order) => (
         <Space size="small">
           <Button type="primary" size="small">
@@ -310,7 +334,11 @@ const AdminOrderList: React.FC = () => {
               filterOptions.status === status.key ? "active" : ""
             }`}
             onClick={() =>
-              setFilterOptions({ ...filterOptions, status: status.key, page: 1 })
+              setFilterOptions({
+                ...filterOptions,
+                status: status.key,
+                page: 1,
+              })
             }
           >
             <span className="tab-text">{status.text}</span>
@@ -405,10 +433,7 @@ const AdminOrderList: React.FC = () => {
             >
               Tìm kiếm
             </Button>
-            <Button
-              icon={<FileExcelOutlined />}
-              className="export-button"
-            >
+            <Button icon={<FileExcelOutlined />} className="export-button">
               Xuất excel đơn hàng
             </Button>
             <Button
@@ -493,7 +518,10 @@ const AdminOrderList: React.FC = () => {
               className="pagination-arrow"
               disabled={filterOptions.page === 1}
               onClick={() =>
-                setFilterOptions({ ...filterOptions, page: filterOptions.page - 1 })
+                setFilterOptions({
+                  ...filterOptions,
+                  page: filterOptions.page - 1,
+                })
               }
             >
               &lt;
@@ -503,7 +531,10 @@ const AdminOrderList: React.FC = () => {
               className="pagination-arrow"
               disabled={filterOptions.page * filterOptions.pageSize >= total}
               onClick={() =>
-                setFilterOptions({ ...filterOptions, page: filterOptions.page + 1 })
+                setFilterOptions({
+                  ...filterOptions,
+                  page: filterOptions.page + 1,
+                })
               }
             >
               &gt;

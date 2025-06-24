@@ -123,7 +123,7 @@ const Header: React.FC = () => {
     };
 
     fetchUserProfile();
-  }, [token]); 
+  }, [token]);
 
   useEffect(() => {
     const handleLoginSuccess = () => {
@@ -163,16 +163,25 @@ const Header: React.FC = () => {
       onOk: async () => {
         try {
           setLoading(true);
-          // Gọi API logout
-          await logoutCustomer();
 
-          // Sau khi logout thành công, xóa dữ liệu cục bộ
+          const token = localStorage.getItem("token");
+
+          if (token) {
+            try {
+              await logoutCustomer();
+              message.success("Đăng xuất thành công!");
+            } catch (error) {
+              console.error("Lỗi API logout:", error);
+            }
+          }
+
           localStorage.removeItem("token");
           localStorage.removeItem("user");
+          localStorage.removeItem("cart");
+
           setUser(null);
           setIsLoggedIn(false);
 
-          message.success("Đăng xuất thành công!");
           navigate("/");
         } catch (error) {
           console.error("Lỗi khi đăng xuất:", error);
@@ -184,7 +193,7 @@ const Header: React.FC = () => {
     });
   };
 
-  // Menu dropdown cho người dùng đã đăng nhập (cập nhật theo cách mới của Ant Design v5)
+  // Menu dropdown cho người dùng đã đăng nhập
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
@@ -227,7 +236,7 @@ const Header: React.FC = () => {
         <div className="container mx-auto px-8 flex justify-between items-center h-14">
           {/* Menu chính - căn giữa */}
           <div className="flex-1 flex justify-center h-full">
-            <ul className="flex gap-6 text-sm font-bold h-full items-center">
+            <ul className="flex gap-6 text-base font-bold h-full items-center">
               <li className="h-full flex items-center">
                 <Link
                   to="/"
@@ -302,7 +311,6 @@ const Header: React.FC = () => {
                     {user.fullName}
                   </span>
                   <Avatar
-                    size="small"
                     icon={<UserOutlined />}
                     className="bg-white text-green-600"
                   />
@@ -314,7 +322,6 @@ const Header: React.FC = () => {
                 className="flex items-center text-white hover:text-gray-200 transition h-full"
               >
                 <Avatar
-                  size="small"
                   icon={<UserOutlined />}
                   className="bg-white text-green-600"
                 />

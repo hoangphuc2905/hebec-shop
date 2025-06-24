@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Form,
   Input,
@@ -11,40 +11,27 @@ import {
   Card,
   Spin,
   Select,
+  Modal,
 } from "antd";
 import {
   UserOutlined,
   PhoneOutlined,
-  EnvironmentOutlined,
   CreditCardOutlined,
   ShopOutlined,
   CheckOutlined,
   LeftOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
+import { createOrder } from "../../../api/orderApi";
+import { EPaymentType } from "../../../types/enums/ePaymentType.enum";
+import type { CartItem } from "../../../types/interfaces/cartItem.interface";
+import type {
+  CreateOrderRequest,
+  OrderFormValues,
+} from "../../../types/interfaces/order.interface";
 
 const { Option } = Select;
 const { TextArea } = Input;
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
-
-interface OrderFormValues {
-  fullName: string;
-  phone: string;
-  email: string;
-  province: string;
-  district: string;
-  ward: string;
-  address: string;
-  shippingMethod: string;
-  paymentMethod: string;
-  notes: string;
-}
 
 const initialValues: OrderFormValues = {
   fullName: "",
@@ -54,17 +41,23 @@ const initialValues: OrderFormValues = {
   district: "",
   ward: "",
   address: "",
-  shippingMethod: "standard",
-  paymentMethod: "cod",
+  paymentMethod: EPaymentType.COD,
   notes: "",
 };
 
 const Order: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [orderFormData, setOrderFormData] = useState<OrderFormValues | null>(
+    null
+  );
+
   const [provinces, setProvinces] = useState<string[]>([
     "Hà Nội",
     "Hồ Chí Minh",
@@ -88,29 +81,46 @@ const Order: React.FC = () => {
   ]);
 
   useEffect(() => {
-    // Mô phỏng việc lấy dữ liệu giỏ hàng
-    setTimeout(() => {
-      setCartItems([
-        {
-          id: "1",
-          name: "143 Món Khai Vị Hấp Dẫn",
-          price: 37000,
-          quantity: 1,
-          image:
-            "https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg",
-        },
-        {
-          id: "2",
-          name: "Trẻ Lâu Đẹp Dáng",
-          price: 82000,
-          quantity: 2,
-          image:
-            "https://salt.tikicdn.com/cache/280x280/ts/product/65/ae/44/73256656d447425db7510a9ac5d84a12.jpg",
-        },
-      ]);
-      setLoading(false);
-    }, 500);
-  }, []);
+    const loadCartData = () => {
+      try {
+        const state = location.state as {
+          directPurchase?: boolean;
+          productId?: string;
+          quantity?: number;
+        } | null;
+
+        if (state?.directPurchase) {
+          const cartJson = localStorage.getItem("cart");
+          const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
+
+          const directPurchaseItem = allCartItems.find(
+            (item) => String(item.id) === String(state.productId)
+          );
+
+          if (directPurchaseItem) {
+            setCartItems([
+              {
+                ...directPurchaseItem,
+                quantity: state.quantity || 1,
+              },
+            ]);
+          }
+        } else {
+          const cartJson = localStorage.getItem("cart");
+          const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
+          setCartItems(allCartItems);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu giỏ hàng:", error);
+        setCartItems([]);
+        setLoading(false);
+      }
+    };
+
+    loadCartData();
+  }, [location.state]);
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -120,12 +130,18 @@ const Order: React.FC = () => {
   };
 
   const calculateShippingFee = () => {
-    const shippingMethod = form.getFieldValue("shippingMethod");
-    return shippingMethod === "express" ? 30000 : 0;
+    return 0; // Miễn phí vận chuyển
   };
 
   const calculateTotal = () => {
     return calculateSubtotal() + calculateShippingFee();
+  };
+
+  const calculateTotalWeight = () => {
+    return cartItems.reduce(
+      (total, item) => total + (item.weight || 500) * item.quantity,
+      0
+    );
   };
 
   const formatPrice = (price: number) => {
@@ -135,7 +151,12 @@ const Order: React.FC = () => {
   const handleNextStep = () => {
     form
       .validateFields()
-      .then(() => {
+      .then((values) => {
+        // Lưu dữ liệu form hiện tại
+        setOrderFormData((prev) => ({
+          ...prev,
+          ...values,
+        }));
         setCurrentStep(currentStep + 1);
       })
       .catch((info) => {
@@ -147,21 +168,110 @@ const Order: React.FC = () => {
     setCurrentStep(currentStep - 1);
   };
 
-  const handleFinish = (values: OrderFormValues) => {
-    // Mô phỏng xử lý đặt hàng
-    message.loading({ content: "Đang xử lý đơn hàng...", key: "order" });
-    
-    setTimeout(() => {
+  const handleFormSubmit = async (values: OrderFormValues) => {
+    // Merge với dữ liệu đã lưu từ step trước
+    const completeFormData = {
+      ...orderFormData,
+      ...values,
+    };
+    setOrderFormData(completeFormData);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!orderFormData) return;
+
+    setSubmitting(true);
+    setShowConfirmModal(false);
+
+    try {
+      const subtotal = calculateSubtotal();
+      const shippingFee = 0;
+      const totalMoney = calculateTotal();
+      const totalWeight = calculateTotalWeight();
+
+      const orderData: CreateOrderRequest = {
+        order: {
+          note: orderFormData.notes || "",
+          paymentMethod: orderFormData.paymentMethod,
+          deliveryType: "standard",
+          receiverName: orderFormData.fullName,
+          receiverPhone: orderFormData.phone,
+          receiverAddress: `${orderFormData.address}, ${orderFormData.ward}, ${orderFormData.district}, ${orderFormData.province}`,
+          isQuickDelivery: false,
+          isFreeShip: true,
+          isReceiveAtStore: false,
+          shipFee: 0,
+          totalMoney: totalMoney,
+          moneyFinal: totalMoney,
+          subTotalMoney: subtotal,
+          totalWeight: totalWeight,
+        },
+        details: cartItems.map((item) => ({
+          quantity: item.quantity,
+          productId: parseInt(item.id),
+          name: item.name,
+          price: item.price,
+          finalPrice: item.price,
+          weight: item.weight || 500,
+          isGift: false,
+        })),
+        cityId: 1,
+        districtId: 1,
+        wardId: 1,
+      };
+
+      message.loading({ content: "Đang xử lý đơn hàng...", key: "order" });
+
+      const result = await createOrder(orderData);
+
       message.success({
         content: "Đặt hàng thành công!",
         key: "order",
         duration: 2,
       });
-      // Chuyển hướng đến trang xác nhận đặt hàng thành công
+
+      if (!location.state?.directPurchase) {
+        localStorage.removeItem("cart");
+      }
+
       setTimeout(() => {
-        navigate("/order-success");
+        navigate("/order-success", {
+          state: {
+            orderId: result?.id,
+            orderCode: result?.code,
+            orderData: orderFormData,
+            orderTotal: totalMoney,
+          },
+        });
       }, 1000);
-    }, 1500);
+    } catch (error: any) {
+      console.error("Lỗi khi tạo đơn hàng:", error);
+      message.error({
+        content: error.message || "Đặt hàng thất bại. Vui lòng thử lại!",
+        key: "order",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelOrder = () => {
+    setShowConfirmModal(false);
+    setOrderFormData(null);
+  };
+
+  const getPaymentMethodText = (method: string) => {
+    switch (method) {
+      case EPaymentType.COD:
+        return "Thanh toán khi nhận hàng (COD)";
+      case EPaymentType.Online:
+        return "Thanh toán trực tuyến";
+      case EPaymentType.Balance:
+        return "Thanh toán bằng điểm";
+      default:
+        return "";
+    }
   };
 
   const steps = [
@@ -172,10 +282,6 @@ const Order: React.FC = () => {
     {
       title: "Phương thức thanh toán",
       icon: <CreditCardOutlined />,
-    },
-    {
-      title: "Xác nhận đơn hàng",
-      icon: <CheckOutlined />,
     },
   ];
 
@@ -229,7 +335,7 @@ const Order: React.FC = () => {
             form={form}
             layout="vertical"
             initialValues={initialValues}
-            onFinish={handleFinish}
+            onFinish={handleFormSubmit}
           >
             {currentStep === 0 && (
               <Card className="mb-6">
@@ -238,13 +344,11 @@ const Order: React.FC = () => {
                 <Form.Item
                   name="fullName"
                   label="Họ tên"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập họ tên!" },
-                  ]}
+                  rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
                 >
-                  <Input 
-                    prefix={<UserOutlined className="text-gray-400" />} 
-                    placeholder="Nhập họ tên người nhận" 
+                  <Input
+                    prefix={<UserOutlined className="text-gray-400" />}
+                    placeholder="Nhập họ tên người nhận"
                   />
                 </Form.Item>
 
@@ -342,42 +446,7 @@ const Order: React.FC = () => {
                     { required: true, message: "Vui lòng nhập địa chỉ!" },
                   ]}
                 >
-                  <TextArea
-                    rows={3}
-                    placeholder="Số nhà, tên đường..."
-                    prefix={<EnvironmentOutlined className="text-gray-400" />}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="shippingMethod"
-                  label="Phương thức vận chuyển"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Vui lòng chọn phương thức vận chuyển!",
-                    },
-                  ]}
-                >
-                  <Radio.Group>
-                    <Radio value="standard">
-                      <div>
-                        <p className="font-medium">Giao hàng tiêu chuẩn</p>
-                        <p className="text-sm text-gray-500">
-                          Nhận hàng trong 3-5 ngày - Miễn phí
-                        </p>
-                      </div>
-                    </Radio>
-                    <Divider className="my-2" />
-                    <Radio value="express">
-                      <div>
-                        <p className="font-medium">Giao hàng nhanh</p>
-                        <p className="text-sm text-gray-500">
-                          Nhận hàng trong 1-2 ngày - 30.000đ
-                        </p>
-                      </div>
-                    </Radio>
-                  </Radio.Group>
+                  <TextArea rows={3} placeholder="Số nhà, tên đường..." />
                 </Form.Item>
 
                 <Form.Item name="notes" label="Ghi chú đơn hàng">
@@ -405,47 +474,51 @@ const Order: React.FC = () => {
                   ]}
                 >
                   <Radio.Group className="w-full">
-                    <Radio value="cod" className="w-full pb-4 border-b border-gray-200">
+                    <Radio
+                      value={EPaymentType.COD}
+                      className="w-full pb-4 border-b border-gray-200"
+                    >
                       <div className="flex items-center">
                         <div className="p-2 bg-yellow-50 rounded-md mr-3">
                           <ShopOutlined className="text-yellow-500 text-xl" />
                         </div>
                         <div>
-                          <p className="font-medium">Thanh toán khi nhận hàng (COD)</p>
+                          <p className="font-medium">
+                            Thanh toán khi nhận hàng (COD)
+                          </p>
                           <p className="text-sm text-gray-500">
                             Thanh toán bằng tiền mặt khi nhận được hàng
                           </p>
                         </div>
                       </div>
                     </Radio>
-                    
-                    <Radio value="bank_transfer" className="w-full mt-4 pb-4 border-b border-gray-200">
+
+                    <Radio
+                      value={EPaymentType.Online}
+                      className="w-full mt-4 pb-4 border-b border-gray-200"
+                    >
                       <div className="flex items-center">
                         <div className="p-2 bg-blue-50 rounded-md mr-3">
                           <CreditCardOutlined className="text-blue-500 text-xl" />
                         </div>
                         <div>
-                          <p className="font-medium">Chuyển khoản ngân hàng</p>
+                          <p className="font-medium">Thanh toán trực tuyến</p>
                           <p className="text-sm text-gray-500">
-                            Thực hiện thanh toán vào tài khoản ngân hàng của chúng tôi
+                            Thanh toán qua thẻ ngân hàng, ví điện tử
                           </p>
                         </div>
                       </div>
                     </Radio>
 
-                    <Radio value="momo" className="w-full mt-4">
+                    <Radio value={EPaymentType.Balance} className="w-full mt-4">
                       <div className="flex items-center">
-                        <div className="p-2 bg-pink-50 rounded-md mr-3">
-                          <img 
-                            src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" 
-                            alt="MoMo" 
-                            className="w-6 h-6"
-                          />
+                        <div className="p-2 bg-green-50 rounded-md mr-3">
+                          <CheckOutlined className="text-green-500 text-xl" />
                         </div>
                         <div>
-                          <p className="font-medium">Thanh toán qua ví MoMo</p>
+                          <p className="font-medium">Thanh toán bằng điểm</p>
                           <p className="text-sm text-gray-500">
-                            Thanh toán qua ứng dụng MoMo
+                            Sử dụng điểm tích lũy để thanh toán
                           </p>
                         </div>
                       </div>
@@ -455,74 +528,49 @@ const Order: React.FC = () => {
               </Card>
             )}
 
-            {currentStep === 2 && (
-              <Card className="mb-6">
-                <h2 className="text-lg font-bold mb-4">Xác nhận đơn hàng</h2>
-                
-                <div className="mb-4">
-                  <h3 className="font-medium mb-2">Thông tin giao hàng</h3>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <p><strong>Người nhận:</strong> {form.getFieldValue("fullName")}</p>
-                    <p><strong>Số điện thoại:</strong> {form.getFieldValue("phone")}</p>
-                    <p><strong>Email:</strong> {form.getFieldValue("email")}</p>
-                    <p><strong>Địa chỉ:</strong> {form.getFieldValue("address")}, {form.getFieldValue("ward")}, {form.getFieldValue("district")}, {form.getFieldValue("province")}</p>
-                    <p><strong>Phương thức vận chuyển:</strong> {form.getFieldValue("shippingMethod") === "express" ? "Giao hàng nhanh" : "Giao hàng tiêu chuẩn"}</p>
-                    {form.getFieldValue("notes") && (
-                      <p><strong>Ghi chú:</strong> {form.getFieldValue("notes")}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Phương thức thanh toán</h3>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    {form.getFieldValue("paymentMethod") === "cod" && (
-                      <p>Thanh toán khi nhận hàng (COD)</p>
-                    )}
-                    {form.getFieldValue("paymentMethod") === "bank_transfer" && (
-                      <p>Chuyển khoản ngân hàng</p>
-                    )}
-                    {form.getFieldValue("paymentMethod") === "momo" && (
-                      <p>Thanh toán qua ví MoMo</p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )}
-            
             <div className="flex justify-between mt-6">
               {currentStep > 0 ? (
-                <Button 
-                  icon={<LeftOutlined />} 
+                <Button
+                  icon={<LeftOutlined />}
                   onClick={handlePreviousStep}
+                  disabled={submitting}
                 >
                   Quay lại
                 </Button>
               ) : (
                 <Link to="/gio-hang">
-                  <Button 
-                    icon={<LeftOutlined />}
-                  >
+                  <Button icon={<LeftOutlined />} disabled={submitting}>
                     Quay lại giỏ hàng
                   </Button>
                 </Link>
               )}
-              
+
               {currentStep < steps.length - 1 ? (
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   onClick={handleNextStep}
                   className="bg-green-600 hover:bg-green-700"
+                  disabled={submitting}
                 >
                   Tiếp tục
                 </Button>
               ) : (
-                <Button 
-                  type="primary" 
-                  htmlType="submit"
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    form
+                      .validateFields()
+                      .then((values) => {
+                        handleFormSubmit(values);
+                      })
+                      .catch((info) => {
+                        console.log("Validate Failed:", info);
+                      });
+                  }}
                   className="bg-green-600 hover:bg-green-700"
+                  disabled={submitting}
                 >
-                  Hoàn tất đặt hàng
+                  Xác nhận đặt hàng
                 </Button>
               )}
             </div>
@@ -533,60 +581,119 @@ const Order: React.FC = () => {
         <div className="md:col-span-1">
           <Card className="sticky top-6">
             <h2 className="text-lg font-bold mb-4">Đơn hàng của bạn</h2>
-            
             <div className="max-h-80 overflow-y-auto mb-4">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center py-3 border-b border-gray-100">
-                  <div className="relative w-16 h-16 flex-shrink-0">
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover rounded-md" 
+                <div
+                  key={item.id}
+                  className="flex items-center py-3 border-b border-gray-100"
+                >
+                  <div className="w-16 h-16 flex-shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-md"
                     />
-                    <span className="absolute -top-2 -right-2 bg-gray-200 text-gray-800 text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {item.quantity}
-                    </span>
                   </div>
                   <div className="ml-3 flex-grow">
-                    <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                    <p className="text-sm text-gray-500">{formatPrice(item.price)}</p>
+                    <p className="text-sm font-medium line-clamp-2">
+                      {item.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatPrice(item.price)} x {item.quantity}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
+                    <p className="font-medium">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
-            
             <Divider className="my-3" />
-            
             <div className="flex justify-between mb-2">
               <span>Tạm tính:</span>
               <span>{formatPrice(calculateSubtotal())}</span>
             </div>
-            
             <div className="flex justify-between mb-2">
               <span>Phí vận chuyển:</span>
-              <span>{calculateShippingFee() > 0 ? formatPrice(calculateShippingFee()) : 'Miễn phí'}</span>
+              <span>Miễn phí</span>
             </div>
-            
             <Divider className="my-3" />
-            
             <div className="flex justify-between text-lg font-bold mb-4">
               <span>Tổng cộng:</span>
-              <span className="text-green-600">{formatPrice(calculateTotal())}</span>
+              <span className="text-green-600">
+                {formatPrice(calculateTotal())}
+              </span>
             </div>
-
-            <p className="text-xs text-gray-500 text-center">
-              Bằng cách tiến hành đặt hàng, bạn đồng ý với các{' '}
-              <Link to="/dieu-khoan" className="text-green-600">
-                điều khoản và điều kiện
-              </Link>{' '}
-              của chúng tôi.
-            </p>
           </Card>
         </div>
       </div>
+
+      {/* Modal xác nhận đặt hàng */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <ExclamationCircleOutlined className="text-orange-500 mr-2" />
+            Xác nhận đặt hàng
+          </div>
+        }
+        open={showConfirmModal}
+        onOk={handleConfirmOrder}
+        onCancel={handleCancelOrder}
+        okText="Đặt hàng"
+        cancelText="Hủy"
+        confirmLoading={submitting}
+        okButtonProps={{
+          className: "bg-green-600 hover:bg-green-700",
+        }}
+        width={600}
+      >
+        <div className="py-4">
+          <p className="mb-4 text-gray-600">
+            Bạn có chắc chắn muốn đặt hàng với thông tin sau không?
+          </p>
+
+          {orderFormData && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h4 className="font-medium mb-2">Thông tin giao hàng:</h4>
+                <p>
+                  <strong>Người nhận:</strong> {orderFormData.fullName}
+                </p>
+                <p>
+                  <strong>Số điện thoại:</strong> {orderFormData.phone}
+                </p>
+                <p>
+                  <strong>Email:</strong> {orderFormData.email}
+                </p>
+                <p>
+                  <strong>Địa chỉ:</strong> {orderFormData.address},{" "}
+                  {orderFormData.ward}, {orderFormData.district},{" "}
+                  {orderFormData.province}
+                </p>
+                {orderFormData.notes && (
+                  <p>
+                    <strong>Ghi chú:</strong> {orderFormData.notes}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h4 className="font-medium mb-2">Phương thức thanh toán:</h4>
+                <p>{getPaymentMethodText(orderFormData.paymentMethod)}</p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-md">
+                <h4 className="font-medium mb-2">Tổng tiền:</h4>
+                <p className="text-lg font-bold text-green-600">
+                  {formatPrice(calculateTotal())}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

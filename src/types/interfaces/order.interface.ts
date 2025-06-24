@@ -3,6 +3,7 @@ import type { Staff } from "./staff.interface";
 import type { OrderReceiptStatus } from "../enums/orderReceiptStatus.enum";
 import type { City, Customer, District, Ward } from "./customer.interface";
 import type { Product } from "./product.interface";
+import type { EPaymentType } from "../enums/ePaymentType.enum";
 
 export interface OrderProductVariation {
   id: number;
@@ -186,7 +187,7 @@ export interface Order {
   length: number; //thông số dành cho đơn ship
   width: number; //thông số dành cho đơn ship
   height: number; //thông số dành cho đơn ship
-  //   paymentMethod: EPaymentType;
+  paymentMethod: EPaymentType;
   //   deliveryType: EDeliveryType;
   senderName: string;
   senderPhone: string;
@@ -303,4 +304,69 @@ export interface Order {
   //check coupon cá nhân
   //
   // sendMsgTelegram(`[calcPointRefund] CH "${this.store.name}" Khách hàng ${this.customer.fullName} - ${this.customer.id} không có hạng để tính điểm`)
+}
+
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  weight?: number;
+}
+
+export interface OrderFormValues {
+  fullName: string;
+  phone: string;
+  email: string;
+  province: string;
+  district: string;
+  ward: string;
+  address: string;
+  shippingMethod: string;
+  paymentMethod: string;
+  notes: string;
+}
+
+// Interface cho API request
+export interface CreateOrderRequest {
+  order: {
+    note: string;
+    paymentMethod: string;
+    deliveryType: string;
+    receiverName: string;
+    receiverPhone: string;
+    receiverAddress: string;
+    isQuickDelivery: boolean;
+    isFreeShip: boolean;
+    isReceiveAtStore: boolean;
+    shipFee: number;
+    totalMoney: number;
+    moneyFinal: number;
+    subTotalMoney: number;
+    totalWeight: number;
+  };
+  details: Array<{
+    quantity: number;
+    productId: number;
+    name: string;
+    price: number;
+    finalPrice: number;
+    weight: number;
+    isGift: boolean;
+  }>;
+  cityId: number;
+  districtId: number;
+  wardId: number;
+}
+
+export interface FilterOptions {
+  search: string;
+  startDate: string | null;
+  endDate: string | null;
+  deliveryMethod: string;
+  invoiceRequired: boolean;
+  page: number;
+  pageSize: number;
+  status: string;
 }

@@ -6,6 +6,7 @@ const axiosClient = axios.create({
     "Content-Type": "application/json",
     namespace: "hoangphuc",
     lang: "hoangphuc",
+    version: "0.0.89",
   },
 });
 
@@ -26,44 +27,44 @@ export const getOrderList = async (params?: any) => {
 };
 
 // Lấy chi tiết đơn hàng
-export const getOrderDetail = async (id: string) => {
-  try {
-    const token = localStorage.getItem("adminToken");
-    const response = await axiosClient.get(`/store/order/${id}`, {
-      headers: {
-        token: token || "",
-      },
-    });
-    return response.data;
-  } catch (error: any) {
-    throw error.response?.data || { message: "Lỗi không xác định." };
-  }
-};
+// export const getOrderDetail = async (id: string) => {
+//   try {
+//     const token = localStorage.getItem("token");
+//     const response = await axiosClient.get(`/store/order/${id}`, {
+//       headers: {
+//         token: token || "",
+//       },
+//     });
+//     return response.data;
+//   } catch (error: any) {
+//     throw error.response?.data || { message: "Lỗi không xác định." };
+//   }
+// };
 
-// Cập nhật trạng thái đơn hàng
-export const updateOrderStatus = async (id: string, status: string) => {
-  try {
-    const token = localStorage.getItem("adminToken");
-    const response = await axiosClient.patch(
-      `/store/order/${id}/status`,
-      { status },
-      {
-        headers: {
-          token: token || "",
-        },
-      }
-    );
-    return response.data;
-  } catch (error: any) {
-    throw error.response?.data || { message: "Lỗi không xác định." };
-  }
-};
+// // Cập nhật trạng thái đơn hàng
+// export const updateOrderStatus = async (id: string, status: string) => {
+//   try {
+//     const token = localStorage.getItem("adminToken");
+//     const response = await axiosClient.patch(
+//       `/store/order/${id}/status`,
+//       { status },
+//       {
+//         headers: {
+//           token: token || "",
+//         },
+//       }
+//     );
+//     return response.data;
+//   } catch (error: any) {
+//     throw error.response?.data || { message: "Lỗi không xác định." };
+//   }
+// };
 
 // Tạo đơn hàng mới
 export const createOrder = async (orderData: any) => {
   try {
-    const token = localStorage.getItem("adminToken");
-    const response = await axiosClient.post("/store/order", orderData, {
+    const token = localStorage.getItem("token");
+    const response = await axiosClient.post("/customer/order", orderData, {
       headers: {
         token: token || "",
       },

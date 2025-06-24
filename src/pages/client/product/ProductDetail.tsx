@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { ShareAltOutlined, HeartOutlined } from "@ant-design/icons";
 import { Button, Image, Input, message } from "antd";
 import { getProductById } from "../../../api/productApi";
@@ -8,6 +8,7 @@ import type { CartItem } from "../../../types/interfaces/cartItem.interface";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
@@ -86,7 +87,6 @@ const ProductDetail = () => {
   const handleThumbnailClick = (image: string) => {
     setMainImage(image);
   };
-
   const handleAddToCart = () => {
     if (!product) return;
 
@@ -113,12 +113,44 @@ const ProductDetail = () => {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
+    // Dispatch event để cập nhật số lượng giỏ hàng trên header
+    window.dispatchEvent(new Event("cart-updated"));
+
     message.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
-
   const handleBuyNow = () => {
+    if (!product) return;
+
+    // Kiểm tra token đăng nhập
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      message.warning("Vui lòng đăng nhập để tiến hành mua hàng.");
+
+      localStorage.setItem("redirectAfterLogin", `/products/${product.id}`);
+      localStorage.setItem(
+        "buyNowProduct",
+        JSON.stringify({
+          productId: product.id,
+          quantity: quantity,
+        })
+      );
+
+      navigate("/login");
+      return;
+    }
+
+    // Đã đăng nhập, thêm sản phẩm vào giỏ hàng
     handleAddToCart();
-    message.info(`Chuyển đến trang thanh toán với ${quantity} sản phẩm`);
+
+    // Chuyển hướng đến trang order với sản phẩm đã chọn
+    navigate("/order", {
+      state: {
+        directPurchase: true,
+        productId: product.id,
+        quantity: quantity,
+      },
+    });
   };
 
   if (loading) {
@@ -274,6 +306,18 @@ const ProductDetail = () => {
                 +
               </Button>
             </div>
+          </div>
+
+          {/* Sold Count - Styled better */}
+          <div className="flex items-center mb-4 py-2 rounded-md ">
+            <div className="text-gray-500" />
+            <span className="text-sm">
+              <span className="text-gray-500">Đã bán:</span>{" "}
+              <span className="font-medium text-gray-700">
+                {product.sold || 0}
+              </span>{" "}
+              sản phẩm
+            </span>
           </div>
 
           {/* Action Buttons */}
