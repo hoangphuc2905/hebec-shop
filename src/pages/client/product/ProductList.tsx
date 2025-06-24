@@ -33,8 +33,19 @@ const CategoryProducts = () => {
   const [filterMobileVisible, setFilterMobileVisible] =
     useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  
+  // State để quản lý trang hiện tại của từng danh mục
+  const [categoryPages, setCategoryPages] = useState<{ [key: number]: number }>(
+    {}
+  );
+  // State để quản lý danh mục nào đang hiển thị tất cả sản phẩm
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
+    new Set()
+  );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const searchInputRef = useRef<any>(null);
+
+  const PRODUCTS_PER_PAGE = 4; // Số sản phẩm hiển thị mỗi trang
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +73,13 @@ const CategoryProducts = () => {
 
           const categoriesArray = Object.values(groupedProducts);
           setCategories(categoriesArray);
+
+          // Khởi tạo trang đầu tiên cho mỗi danh mục
+          const initialPages: { [key: number]: number } = {};
+          categoriesArray.forEach((category) => {
+            initialPages[category.id] = 0;
+          });
+          setCategoryPages(initialPages);
         } else {
           setCategories([]);
         }
@@ -85,15 +103,43 @@ const CategoryProducts = () => {
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setSearchTerm(e.target.value);
+      // Reset trang về đầu khi tìm kiếm
+      const resetPages: { [key: number]: number } = {};
+      categories.forEach((category) => {
+        resetPages[category.id] = 0;
+      });
+      setCategoryPages(resetPages);
     },
-    []
+    [categories]
   );
 
   const handleCategorySelect = useCallback(
     (categoryId: number) => {
       setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+      // Reset trang về đầu khi thay đổi danh mục
+      const resetPages: { [key: number]: number } = {};
+      categories.forEach((category) => {
+        resetPages[category.id] = 0;
+      });
+      setCategoryPages(resetPages);
     },
-    [selectedCategory]
+    [selectedCategory, categories]
+  );
+
+  // Hàm chuyển trang cho danh mục
+  const handlePageChange = useCallback(
+    (categoryId: number, direction: "prev" | "next") => {
+      setCategoryPages((prev) => {
+        const currentPage = prev[categoryId] || 0;
+        const newPage =
+          direction === "next" ? currentPage + 1 : Math.max(0, currentPage - 1);
+        return {
+          ...prev,
+          [categoryId]: newPage,
+        };
+      });
+    },
+    []
   );
 
   // Thêm hàm helper cho tìm kiếm linh hoạt
@@ -146,6 +192,57 @@ const CategoryProducts = () => {
         return category;
       });
   }, [categories, searchTerm, selectedCategory, isMatch]);
+
+  // Hàm toggle hiển thị tất cả sản phẩm trong danh mục
+  const toggleExpandCategory = useCallback((categoryId: number) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+        // Reset về trang đầu khi thu gọn
+        setCategoryPages((prevPages) => ({
+          ...prevPages,
+          [categoryId]: 0,
+        }));
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Hàm lấy sản phẩm theo trang (cập nhật để xử lý trường hợp mở rộng)
+  const getProductsForPage = useCallback(
+    (category: ProductCategory) => {
+      // Nếu danh mục được mở rộng, hiển thị tất cả sản phẩm
+      if (expandedCategories.has(category.id)) {
+        return category.products;
+      }
+
+      const currentPage = categoryPages[category.id] || 0;
+      const startIndex = currentPage * PRODUCTS_PER_PAGE;
+      const endIndex = startIndex + PRODUCTS_PER_PAGE;
+      return category.products.slice(startIndex, endIndex);
+    },
+    [categoryPages, expandedCategories]
+  );
+
+  // Hàm kiểm tra có thể chuyển trang không
+  const canNavigate = useCallback(
+    (category: ProductCategory, direction: "prev" | "next") => {
+      const currentPage = categoryPages[category.id] || 0;
+      const totalPages = Math.ceil(
+        category.products.length / PRODUCTS_PER_PAGE
+      );
+
+      if (direction === "prev") {
+        return currentPage > 0;
+      } else {
+        return currentPage < totalPages - 1;
+      }
+    },
+    [categoryPages]
+  );
 
   const renderCategorySidebar = useCallback(
     () => (
@@ -302,79 +399,138 @@ const CategoryProducts = () => {
         {renderCategorySidebar()}
 
         <div className="flex-1">
-          <div className="space-y-12">
+          <div className="space-y-8">
             {filteredCategories
               .filter((category) => category.products.length > 0)
-              .map((category) => (
-                <div key={category.id}>
-                  <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 className="text-base font-bold text-gray-800">
-                      {category.name}
-                    </h2>
-                    <div className="flex gap-2">
-                      <Button className="bg-gray-100 hover:bg-gray-200 flex items-center justify-center h-8 w-8 rounded-full">
-                        <LeftOutlined />
-                      </Button>
-                      <Button className="bg-gray-100 hover:bg-gray-200 flex items-center justify-center h-8 w-8 rounded-full">
-                        <RightOutlined />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {category.products.map((product) => (
-                      <Link
-                        key={product.id}
-                        to={`/products/${product.id}`}
-                        className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-200 hover:border-green-600"
-                      >
-                        <div className="overflow-hidden border-b">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                        <div className="p-4">
-                          <h3 className="text-sm font-bold text-gray-800 group-hover:text-green-600 line-clamp-2 h-10 mb-2">
-                            {product.name}
-                          </h3>
-                          {product.description && (
-                            <p className="text-xs text-gray-600 line-clamp-2 mb-2 h-8">
-                              {product.description}
-                            </p>
+              .map((category, index) => {
+                const currentPage = categoryPages[category.id] || 0;
+
+                const displayProducts = getProductsForPage(category);
+                const isExpanded = expandedCategories.has(category.id);
+
+                return (
+                  <div key={category.id}>
+                    {/* Thêm đường ngăn cách giữa các danh mục */}
+                    {index > 0 && (
+                      <div className="border-t border-gray-200 mb-8"></div>
+                    )}
+
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                        <div className="flex items-center gap-4">
+                          <h2 className="text-xl font-bold text-gray-800">
+                            {category.name}
+                          </h2>
+                          {!isExpanded && (
+                            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                              ({currentPage * PRODUCTS_PER_PAGE + 1}-
+                              {Math.min(
+                                (currentPage + 1) * PRODUCTS_PER_PAGE,
+                                category.products.length
+                              )}
+                              / {category.products.length})
+                            </span>
                           )}
-                          <div className="flex flex-col gap-1">
-                            {product.importPrice &&
-                              product.importPrice > product.finalPrice && (
-                                <div className="text-xs text-gray-400 line-through">
-                                  {formatPrice(product.importPrice)}
+                          {isExpanded && (
+                            <span className="text-sm text-gray-500 bg-green-100 px-3 py-1 rounded-full">
+                              Hiển thị tất cả {category.products.length} sản
+                              phẩm
+                            </span>
+                          )}
+                        </div>
+                        {!isExpanded && (
+                          <div className="flex gap-2">
+                            <Button
+                              className={`flex items-center justify-center h-8 w-8 rounded-full ${
+                                canNavigate(category, "prev")
+                                  ? "bg-green-100 hover:bg-green-200 text-green-600"
+                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              }`}
+                              onClick={() =>
+                                handlePageChange(category.id, "prev")
+                              }
+                              disabled={!canNavigate(category, "prev")}
+                            >
+                              <LeftOutlined />
+                            </Button>
+                            <Button
+                              className={`flex items-center justify-center h-8 w-8 rounded-full ${
+                                canNavigate(category, "next")
+                                  ? "bg-green-100 hover:bg-green-200 text-green-600"
+                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              }`}
+                              onClick={() =>
+                                handlePageChange(category.id, "next")
+                              }
+                              disabled={!canNavigate(category, "next")}
+                            >
+                              <RightOutlined />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {displayProducts.map((product) => (
+                          <Link
+                            key={product.id}
+                            to={`/products/${product.id}`}
+                            className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-200 hover:border-green-600"
+                          >
+                            <div className="overflow-hidden border-b">
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-sm font-bold text-gray-800 group-hover:text-green-600 line-clamp-2 h-10 mb-2">
+                                {product.name}
+                              </h3>
+                              {product.description && (
+                                <p className="text-xs text-gray-600 line-clamp-2 mb-2 h-8">
+                                  {product.description}
+                                </p>
+                              )}
+                              <div className="flex flex-col gap-1">
+                                {product.importPrice &&
+                                  product.importPrice > product.finalPrice && (
+                                    <div className="text-xs text-gray-400 line-through">
+                                      {formatPrice(product.importPrice)}
+                                    </div>
+                                  )}
+                                <div className="font-bold text-green-600 text-lg">
+                                  {formatPrice(product.finalPrice)}
+                                </div>
+                              </div>
+                              {typeof product.sold !== "undefined" && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Đã bán: {product.sold || 0}
                                 </div>
                               )}
-                            <div className="font-bold text-green-600 text-lg">
-                              {formatPrice(product.finalPrice)}
                             </div>
-                          </div>
-                          {typeof product.sold !== "undefined" && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Đã bán: {product.sold || 0}
-                            </div>
-                          )}
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Nút toggle */}
+                      {category.products.length > PRODUCTS_PER_PAGE && (
+                        <div className="flex justify-center mt-6 pt-4 border-t border-gray-100">
+                          <button
+                            onClick={() => toggleExpandCategory(category.id)}
+                            className="py-2 px-6 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
+                          >
+                            {isExpanded
+                              ? `Thu gọn`
+                              : `Xem tất cả (${category.products.length})`}
+                          </button>
                         </div>
-                      </Link>
-                    ))}
-                  </div>
-                  {category.products.length > 8 && (
-                    <div className="text-center mt-6">
-                      <Link
-                        to={`/danh-muc/${category.slug}`}
-                        className="inline-block bg-white hover:bg-gray-50 text-green-600 border border-green-600 px-4 py-2 rounded-md font-medium hover:text-green-700 transition-colors"
-                      >
-                        Xem thêm sản phẩm
-                      </Link>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>

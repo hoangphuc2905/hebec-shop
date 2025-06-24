@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Tabs,
@@ -5,7 +6,6 @@ import {
   Input,
   Button,
   Avatar,
-  Upload,
   Spin,
   Table,
   Tag,
@@ -18,11 +18,9 @@ import {
   MailOutlined,
   HomeOutlined,
   LockOutlined,
-  UploadOutlined,
   ShoppingOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
-import type { UploadFile } from "antd/es/upload/interface";
 import { getCustomerProfile } from "../../../api/customerApi";
 import { getCustomerOrderList } from "../../../api/orderApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
@@ -38,7 +36,6 @@ const Profile: React.FC = () => {
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [passwordModalVisible, setPasswordModalVisible] =
     useState<boolean>(false);
   const [orderDetailModalVisible, setOrderDetailModalVisible] =
@@ -89,17 +86,6 @@ const Profile: React.FC = () => {
             phone: userData.phone || "",
             address: userData.address || "",
           });
-
-          if (userData.avatar) {
-            setFileList([
-              {
-                uid: "-1",
-                name: "avatar.png",
-                status: "done",
-                url: userData.avatar,
-              },
-            ]);
-          }
         }
       } catch (error) {
         console.error("Không thể lấy thông tin người dùng:", error);
@@ -114,76 +100,6 @@ const Profile: React.FC = () => {
     fetchUserProfile();
     fetchOrders();
   }, [profileForm, navigate]);
-
-  const handleProfileUpdate = async (values: any) => {
-    try {
-      setLoading(true);
-
-      setTimeout(() => {
-        setUser({
-          ...user!,
-          ...values,
-          updatedAt: new Date().toISOString(),
-        });
-
-        message.success("Cập nhật thông tin thành công");
-        setLoading(false);
-      }, 800);
-    } catch (error) {
-      message.error("Cập nhật thông tin thất bại");
-      console.error(error);
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordChange = async (values: any) => {
-    try {
-      setTimeout(() => {
-        message.success("Đổi mật khẩu thành công");
-        setPasswordModalVisible(false);
-        passwordForm.resetFields();
-      }, 800);
-    } catch (error) {
-      message.error("Đổi mật khẩu thất bại");
-      console.error(error);
-    }
-  };
-
-  const handleCancelOrder = async (orderId: number) => {
-    try {
-      // Cập nhật trạng thái order local trước
-      const updatedOrders = orders.map((order) => {
-        if (order.id === orderId) {
-          return {
-            ...order,
-            status: "CANCELLED",
-            updatedAt: Math.floor(Date.now() / 1000),
-          };
-        }
-        return order;
-      });
-
-      setOrders(updatedOrders);
-
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({
-          ...selectedOrder,
-          status: "CANCELLED",
-          updatedAt: Math.floor(Date.now() / 1000),
-        });
-      }
-
-      message.success("Đơn hàng đã được hủy");
-
-      // Reload lại danh sách đơn hàng từ server
-      await fetchOrders();
-    } catch (error) {
-      console.error("Lỗi khi hủy đơn hàng:", error);
-      message.error("Không thể hủy đơn hàng. Vui lòng thử lại sau.");
-      // Reload lại để đồng bộ dữ liệu
-      await fetchOrders();
-    }
-  };
 
   const showOrderDetail = (order: Order) => {
     setSelectedOrder(order);
@@ -326,7 +242,7 @@ const Profile: React.FC = () => {
               icon={!user?.avatar && <UserOutlined />}
               className="border-2 border-gray-200"
             />
-            <Upload
+            {/* <Upload
               fileList={fileList}
               onChange={({ fileList }) => setFileList(fileList)}
               maxCount={1}
@@ -336,7 +252,7 @@ const Profile: React.FC = () => {
               <Button icon={<UploadOutlined />} size="small">
                 Thay đổi ảnh
               </Button>
-            </Upload>
+            </Upload> */}
           </div>
           <div>
             <h2 className="text-xl font-bold">{user?.fullName}</h2>
@@ -358,7 +274,7 @@ const Profile: React.FC = () => {
             <Form
               form={profileForm}
               layout="vertical"
-              onFinish={handleProfileUpdate}
+              // onFinish={handleProfileUpdate}
               className="max-w-lg"
             >
               <Form.Item
@@ -483,7 +399,7 @@ const Profile: React.FC = () => {
         <Form
           form={passwordForm}
           layout="vertical"
-          onFinish={handlePasswordChange}
+          // onFinish={handlePasswordChange}
         >
           <Form.Item
             name="currentPassword"
@@ -650,7 +566,7 @@ const Profile: React.FC = () => {
               <div className="mt-4 flex justify-end">
                 <Button
                   danger
-                  onClick={() => handleCancelOrder(selectedOrder.id)}
+                  // onClick={() => handleCancelOrder(selectedOrder.id)}
                 >
                   Hủy đơn hàng
                 </Button>
