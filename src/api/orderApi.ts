@@ -74,3 +74,19 @@ export const createOrder = async (orderData: any) => {
     throw error.response?.data || { message: "Lỗi không xác định." };
   }
 };
+
+// lấy danh sách đơn hàng của khách hàng
+export const getCustomerOrderList = async (params?: any) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axiosClient.get("/customer/order", {
+      headers: {
+        token: token || "",
+      },
+      params,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};

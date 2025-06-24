@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { Link } from "react-router-dom";
 import {
   LeftOutlined,
@@ -26,6 +32,7 @@ const CategoryProducts = () => {
   const [filterMobileVisible, setFilterMobileVisible] =
     useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const searchInputRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +49,6 @@ const CategoryProducts = () => {
 
             if (categoryId && product.productCategory) {
               if (!groupedProducts[categoryId]) {
-                // Tạo một danh mục mới nếu chưa có
                 groupedProducts[categoryId] = {
                   ...product.productCategory,
                   products: [],
@@ -71,79 +77,103 @@ const CategoryProducts = () => {
     fetchData();
   }, []);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = useCallback((price: number) => {
     return `${price.toLocaleString("vi-VN")} đ`;
-  };
+  }, []);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleCategorySelect = (categoryId: number) => {
-    setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
-  };
-
-  const filteredCategories = categories.filter((category) => {
-    if (selectedCategory && category.id !== selectedCategory) {
-      return false;
-    }
-
-    if (searchTerm) {
-      return category.products.some((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    return true;
-  });
-
-  const renderCategorySidebar = () => (
-    <div className="hidden md:block w-64 pr-6 border-r">
-      <h3 className="font-bold text-lg mb-4">Danh mục sản phẩm</h3>
-      <div className="space-y-2">
-        {categories.map((category) => (
-          <div key={category.id} className="flex items-center">
-            <Checkbox
-              checked={selectedCategory === category.id}
-              onChange={() => handleCategorySelect(category.id)}
-              className="text-gray-700 hover:text-green-600 cursor-pointer"
-            >
-              {category.name} ({category.products.length})
-            </Checkbox>
-          </div>
-        ))}
-      </div>
-
-      <Divider />
-    </div>
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchTerm(e.target.value);
+    },
+    []
   );
 
-  const renderMobileFilters = () => (
-    <Drawer
-      title="Lọc sản phẩm"
-      placement="left"
-      onClose={() => setFilterMobileVisible(false)}
-      open={filterMobileVisible}
-      width={300}
-    >
-      <div className="mb-6">
-        <h3 className="font-bold text-lg mb-3">Danh mục sản phẩm</h3>
-        <div className="space-y-3">
+  const handleCategorySelect = useCallback(
+    (categoryId: number) => {
+      setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+    },
+    [selectedCategory]
+  );
+
+  const filteredCategories = useMemo(() => {
+    return categories
+      .filter((category) => {
+        if (selectedCategory && category.id !== selectedCategory) {
+          return false;
+        }
+
+        if (searchTerm) {
+          return category.products.some((product) =>
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        return true;
+      })
+      .map((category) => {
+        if (searchTerm) {
+          return {
+            ...category,
+            products: category.products.filter((product) =>
+              product.name.toLowerCase().includes(searchTerm.toLowerCase())
+            ),
+          };
+        }
+        return category;
+      });
+  }, [categories, searchTerm, selectedCategory]);
+
+  const renderCategorySidebar = useCallback(
+    () => (
+      <div className="hidden md:block w-64 pr-6 border-r">
+        <h3 className="font-bold text-lg mb-4">Danh mục sản phẩm</h3>
+        <div className="space-y-2">
           {categories.map((category) => (
             <div key={category.id} className="flex items-center">
               <Checkbox
                 checked={selectedCategory === category.id}
                 onChange={() => handleCategorySelect(category.id)}
+                className="text-gray-700 hover:text-green-600 cursor-pointer"
               >
                 {category.name} ({category.products.length})
               </Checkbox>
             </div>
           ))}
         </div>
+        <Divider />
       </div>
+    ),
+    [categories, selectedCategory, handleCategorySelect]
+  );
 
-      <Divider />
-    </Drawer>
+  const renderMobileFilters = useCallback(
+    () => (
+      <Drawer
+        title="Lọc sản phẩm"
+        placement="left"
+        onClose={() => setFilterMobileVisible(false)}
+        open={filterMobileVisible}
+        width={300}
+      >
+        <div className="mb-6">
+          <h3 className="font-bold text-lg mb-3">Danh mục sản phẩm</h3>
+          <div className="space-y-3">
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center">
+                <Checkbox
+                  checked={selectedCategory === category.id}
+                  onChange={() => handleCategorySelect(category.id)}
+                >
+                  {category.name} ({category.products.length})
+                </Checkbox>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Divider />
+      </Drawer>
+    ),
+    [categories, selectedCategory, filterMobileVisible, handleCategorySelect]
   );
 
   if (loading) {
@@ -186,14 +216,15 @@ const CategoryProducts = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <Input
+              ref={searchInputRef}
               placeholder="Tìm kiếm sản phẩm..."
               prefix={<SearchOutlined className="text-gray-400" />}
-              onChange={handleSearch}
+              onChange={handleSearchChange}
               value={searchTerm}
               className="w-full"
               size="large"
             />
-          </div>{" "}
+          </div>
           <div className="flex gap-2">
             <Button
               icon={<FilterOutlined />}
@@ -209,15 +240,12 @@ const CategoryProducts = () => {
 
       {/* Nội dung chính */}
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Sidebar - ẩn trên mobile */}
         {renderCategorySidebar()}
 
-        {/* Danh sách sản phẩm */}
         <div className="flex-1">
           <div className="space-y-12">
             {filteredCategories.map((category) => (
               <div key={category.id}>
-                {/* Category header */}
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                   <h2 className="text-xl font-bold text-gray-800">
                     {category.name}
@@ -230,14 +258,13 @@ const CategoryProducts = () => {
                       <RightOutlined />
                     </Button>
                   </div>
-                </div>{" "}
-                {/* Products Grid */}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {category.products.map((product) => (
                     <Link
                       key={product.id}
                       to={`/products/${product.id}`}
-                      className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                      className="block group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-200 hover:border-green-600"
                     >
                       <div className="overflow-hidden border-b">
                         <img
@@ -250,8 +277,21 @@ const CategoryProducts = () => {
                         <h3 className="text-sm font-medium text-gray-800 group-hover:text-green-600 line-clamp-2 h-10 mb-2">
                           {product.name}
                         </h3>
-                        <div className="font-medium text-green-600 text-lg">
-                          {formatPrice(product.finalPrice)}
+                        {product.description && (
+                          <p className="text-xs text-gray-600 line-clamp-2 mb-2 h-6">
+                            {product.description}
+                          </p>
+                        )}
+                        <div className="flex flex-col gap-1">
+                          {product.importPrice &&
+                            product.importPrice > product.finalPrice && (
+                              <div className="text-xs text-gray-400 line-through">
+                                {formatPrice(product.importPrice)}
+                              </div>
+                            )}
+                          <div className="font-medium text-green-600 text-lg">
+                            {formatPrice(product.finalPrice)}
+                          </div>
                         </div>
                         {typeof product.sold !== "undefined" && (
                           <div className="text-xs text-gray-500 mt-1">
@@ -261,8 +301,7 @@ const CategoryProducts = () => {
                       </div>
                     </Link>
                   ))}
-                </div>{" "}
-                {/* "Xem thêm" link nếu có nhiều sản phẩm */}
+                </div>
                 {category.products.length > 8 && (
                   <div className="text-center mt-6">
                     <Link
@@ -279,7 +318,6 @@ const CategoryProducts = () => {
         </div>
       </div>
 
-      {/* Drawer bộ lọc cho mobile */}
       {renderMobileFilters()}
     </div>
   );

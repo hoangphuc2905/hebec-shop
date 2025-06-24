@@ -12,6 +12,8 @@ import logo from "../../../assets/logo.png";
 import { getCustomerProfile } from "../../../api/customerApi";
 import { logoutCustomer } from "../../../api/customerApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
+import { useStore } from "../../../stores";
+import { observer } from "mobx-react-lite";
 
 const useToken = (key: string) => {
   const [token, setToken] = useState<string | null>(() => {
@@ -39,50 +41,13 @@ const useToken = (key: string) => {
   return [token, setToken];
 };
 
-const Header: React.FC = () => {
+const Header: React.FC = observer(() => {
+  const { cartStore } = useStore();
   const [user, setUser] = useState<Customer | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [cartCount, setCartCount] = useState<number>(0); // New state for cart count
   const [token] = useToken("token");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const updateCartCount = () => {
-      try {
-        const cartData = localStorage.getItem("cart");
-        if (cartData) {
-          const cartItems = JSON.parse(cartData);
-          setCartCount(cartItems.length);
-        } else {
-          setCartCount(0);
-        }
-      } catch (error) {
-        console.error("Error reading cart data:", error);
-        setCartCount(0);
-      }
-    };
-
-    updateCartCount();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "cart") {
-        updateCartCount();
-      }
-    };
-
-    const handleCartUpdate = () => {
-      updateCartCount();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("cart-updated", handleCartUpdate);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("cart-updated", handleCartUpdate);
-    };
-  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -200,11 +165,7 @@ const Header: React.FC = () => {
       icon: <UserOutlined />,
       label: <Link to="/profile">Thông tin cá nhân</Link>,
     },
-    {
-      key: "orders",
-      icon: <FileTextOutlined />,
-      label: <Link to="/tai-khoan?tab=orders">Lịch sử đơn hàng</Link>,
-    },
+
     {
       type: "divider",
     },
@@ -292,9 +253,11 @@ const Header: React.FC = () => {
             <div className="relative">
               <Link to="/cart">
                 <ShoppingCartOutlined className="text-lg text-white hover:text-gray-200 transition-colors" />
-                <span className="absolute -top-2 -right-2 bg-white text-green-600 text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {cartCount}
-                </span>
+                {cartStore.totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartStore.totalItems > 99 ? "99+" : cartStore.totalItems}
+                  </span>
+                )}
               </Link>
             </div>
 
@@ -332,6 +295,6 @@ const Header: React.FC = () => {
       </nav>
     </header>
   );
-};
+});
 
 export default Header;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Form,
@@ -7,7 +7,6 @@ import {
   Radio,
   Divider,
   Steps,
-  message,
   Card,
   Spin,
   Select,
@@ -21,14 +20,13 @@ import {
   CheckOutlined,
   LeftOutlined,
   ExclamationCircleOutlined,
+  ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { createOrder } from "../../../api/orderApi";
+import { observer } from "mobx-react-lite";
+import { orderStore } from "../../../stores/orderStore";
 import { EPaymentType } from "../../../types/enums/ePaymentType.enum";
-import type { CartItem } from "../../../types/interfaces/cartItem.interface";
-import type {
-  CreateOrderRequest,
-  OrderFormValues,
-} from "../../../types/interfaces/order.interface";
+import type { OrderFormValues } from "../../../types/interfaces/order.interface";
+import "../../../styles/override.css";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -45,119 +43,50 @@ const initialValues: OrderFormValues = {
   notes: "",
 };
 
-const Order: React.FC = () => {
+const Order: React.FC = observer(() => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
-  const [orderFormData, setOrderFormData] = useState<OrderFormValues | null>(
-    null
-  );
+  const { directPurchase, product, quantity } = location.state || {};
 
-  const [provinces, setProvinces] = useState<string[]>([
-    "Hà Nội",
-    "Hồ Chí Minh",
-    "Hải Phòng",
-    "Đà Nẵng",
-    "Hải Dương",
-    "Bắc Ninh",
-  ]);
-  const [districts, setDistricts] = useState<string[]>([
-    "Quận 1",
-    "Quận 2",
-    "Quận 3",
-    "Huyện A",
-    "Huyện B",
-  ]);
-  const [wards, setWards] = useState<string[]>([
-    "Phường 1",
-    "Phường 2",
-    "Xã A",
-    "Xã B",
-  ]);
+  console.log("Order received state:", location.state);
 
   useEffect(() => {
-    const loadCartData = () => {
-      try {
-        const state = location.state as {
-          directPurchase?: boolean;
-          productId?: string;
-          quantity?: number;
-        } | null;
+    console.log("Direct purchase:", directPurchase);
+    console.log("Product:", product);
+    console.log("Quantity:", quantity);
 
-        if (state?.directPurchase) {
-          const cartJson = localStorage.getItem("cart");
-          const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
+    if (directPurchase && product) {
+      // Giả lập dữ liệu từ cart store
+      const cartData = {
+        directPurchase: true,
+        selectedItems: [
+          {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: quantity || 1,
+          },
+        ],
+      };
+      console.log("Processed cart data for direct purchase:", cartData);
+      orderStore.loadCartData(cartData);
+    } else {
+      orderStore.loadCartData(location.state);
+    }
 
-          const directPurchaseItem = allCartItems.find(
-            (item) => String(item.id) === String(state.productId)
-          );
-
-          if (directPurchaseItem) {
-            setCartItems([
-              {
-                ...directPurchaseItem,
-                quantity: state.quantity || 1,
-              },
-            ]);
-          }
-        } else {
-          const cartJson = localStorage.getItem("cart");
-          const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
-          setCartItems(allCartItems);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu giỏ hàng:", error);
-        setCartItems([]);
-        setLoading(false);
-      }
+    return () => {
+      orderStore.reset();
     };
-
-    loadCartData();
-  }, [location.state]);
-
-  const calculateSubtotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
-  };
-
-  const calculateShippingFee = () => {
-    return 0; // Miễn phí vận chuyển
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateShippingFee();
-  };
-
-  const calculateTotalWeight = () => {
-    return cartItems.reduce(
-      (total, item) => total + (item.weight || 500) * item.quantity,
-      0
-    );
-  };
-
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
-  };
+  }, [location.state, directPurchase, product, quantity]);
 
   const handleNextStep = () => {
     form
       .validateFields()
       .then((values) => {
-        // Lưu dữ liệu form hiện tại
-        setOrderFormData((prev) => ({
-          ...prev,
-          ...values,
-        }));
-        setCurrentStep(currentStep + 1);
+        orderStore.updateOrderFormData(values);
+        orderStore.nextStep();
       })
       .catch((info) => {
         console.log("Validate Failed:", info);
@@ -165,113 +94,140 @@ const Order: React.FC = () => {
   };
 
   const handlePreviousStep = () => {
-    setCurrentStep(currentStep - 1);
+    orderStore.previousStep();
   };
 
   const handleFormSubmit = async (values: OrderFormValues) => {
-    // Merge với dữ liệu đã lưu từ step trước
-    const completeFormData = {
-      ...orderFormData,
-      ...values,
+    orderStore.openConfirmModal(values);
+  };
+
+  // Thêm helper function này vào đầu component (sau các import)
+  const getOrderData = (directPurchase, product, quantity, orderStore) => {
+    let orderDetails = [];
+    let totalAmount = 0;
+
+    if (directPurchase && product) {
+      // Mua ngay
+      orderDetails = [
+        {
+          productId: product.id,
+          quantity: quantity || 1,
+          price: product.price,
+          name: product.name, // Thêm tên sản phẩm để debug
+          image: product.image, // Thêm hình ảnh để debug
+        },
+      ];
+      totalAmount = product.price * (quantity || 1);
+    } else if (orderStore.cartItems.length > 0) {
+      // Từ giỏ hàng
+      orderDetails = orderStore.cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+        image: item.image,
+      }));
+      totalAmount = orderStore.total;
+    }
+
+    return {
+      orderDetails,
+      totalAmount,
+      hasProducts: orderDetails.length > 0,
     };
-    setOrderFormData(completeFormData);
-    setShowConfirmModal(true);
   };
 
   const handleConfirmOrder = async () => {
-    if (!orderFormData) return;
-
-    setSubmitting(true);
-    setShowConfirmModal(false);
-
     try {
-      const subtotal = calculateSubtotal();
-      const shippingFee = 0;
-      const totalMoney = calculateTotal();
-      const totalWeight = calculateTotalWeight();
+      const { orderDetails, totalAmount, hasProducts } = getOrderData(
+        directPurchase,
+        product,
+        quantity,
+        orderStore
+      );
 
-      const orderData: CreateOrderRequest = {
-        order: {
-          note: orderFormData.notes || "",
-          paymentMethod: orderFormData.paymentMethod,
-          deliveryType: "standard",
-          receiverName: orderFormData.fullName,
-          receiverPhone: orderFormData.phone,
-          receiverAddress: `${orderFormData.address}, ${orderFormData.ward}, ${orderFormData.district}, ${orderFormData.province}`,
-          isQuickDelivery: false,
-          isFreeShip: true,
-          isReceiveAtStore: false,
-          shipFee: 0,
-          totalMoney: totalMoney,
-          moneyFinal: totalMoney,
-          subTotalMoney: subtotal,
-          totalWeight: totalWeight,
-        },
-        details: cartItems.map((item) => ({
-          quantity: item.quantity,
-          productId: parseInt(item.id),
-          name: item.name,
-          price: item.price,
-          finalPrice: item.price,
-          weight: item.weight || 500,
-          isGift: false,
-        })),
-        cityId: 1,
-        districtId: 1,
-        wardId: 1,
-      };
+      console.log("=== DEBUG ORDER DATA ===");
+      console.log("directPurchase:", directPurchase);
+      console.log("product:", product);
+      console.log("quantity:", quantity);
+      console.log("orderStore.cartItems:", orderStore.cartItems);
+      console.log("orderStore.total:", orderStore.total);
+      console.log("orderDetails:", orderDetails);
+      console.log("totalAmount:", totalAmount);
+      console.log("hasProducts:", hasProducts);
+      console.log("orderStore.orderFormData:", orderStore.orderFormData);
 
-      message.loading({ content: "Đang xử lý đơn hàng...", key: "order" });
-
-      const result = await createOrder(orderData);
-
-      message.success({
-        content: "Đặt hàng thành công!",
-        key: "order",
-        duration: 2,
-      });
-
-      if (!location.state?.directPurchase) {
-        localStorage.removeItem("cart");
+      if (!hasProducts) {
+        console.error("Không có sản phẩm để đặt hàng");
+        return;
       }
 
-      setTimeout(() => {
-        navigate("/order-success", {
-          state: {
-            orderId: result?.id,
-            orderCode: result?.code,
-            orderData: orderFormData,
-            orderTotal: totalMoney,
-          },
-        });
-      }, 1000);
-    } catch (error: any) {
-      console.error("Lỗi khi tạo đơn hàng:", error);
-      message.error({
-        content: error.message || "Đặt hàng thất bại. Vui lòng thử lại!",
-        key: "order",
+      // Validate required fields
+      if (
+        !orderStore.orderFormData.fullName ||
+        !orderStore.orderFormData.phone
+      ) {
+        console.error("Thiếu thông tin bắt buộc:", orderStore.orderFormData);
+        return;
+      }
+
+      // Tạo Details array và validate
+      const detailsArray = orderDetails.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      console.log("=== DETAILS ARRAY VALIDATION ===");
+      console.log("detailsArray:", detailsArray);
+      console.log("detailsArray.length:", detailsArray.length);
+      console.log("Array.isArray(detailsArray):", Array.isArray(detailsArray));
+
+      // Validate từng item trong Details
+      detailsArray.forEach((item, index) => {
+        console.log(`Detail ${index}:`, item);
+        console.log(
+          `  - productId: ${item.productId} (type: ${typeof item.productId})`
+        );
+        console.log(
+          `  - quantity: ${item.quantity} (type: ${typeof item.quantity})`
+        );
+        console.log(`  - price: ${item.price} (type: ${typeof item.price})`);
       });
-    } finally {
-      setSubmitting(false);
+
+      const orderData = {
+        ...orderStore.orderFormData,
+        details: detailsArray,
+        totalAmount: totalAmount,
+        shippingFee: 0,
+        discount: 0,
+        directPurchase: directPurchase || false, // Đảm bảo có giá trị boolean
+      };
+
+      console.log("=== FINAL ORDER DATA FOR API ===");
+      console.log(JSON.stringify(orderData, null, 2));
+
+      // Validate final data trước khi gửi
+      if (
+        !orderData.details ||
+        !Array.isArray(orderData.details) ||
+        orderData.details.length === 0
+      ) {
+        console.error("❌ Details array is invalid:", orderData.details);
+        return;
+      }
+
+      console.log("✅ Order data validation passed, sending to API...");
+      console.log("🔍 Is direct purchase?:", orderData.directPurchase);
+
+      await orderStore.createOrder(navigate, orderData);
+    } catch (error) {
+      console.error("Error confirming order:", error);
     }
   };
 
   const handleCancelOrder = () => {
-    setShowConfirmModal(false);
-    setOrderFormData(null);
-  };
-
-  const getPaymentMethodText = (method: string) => {
-    switch (method) {
-      case EPaymentType.COD:
-        return "Thanh toán khi nhận hàng (COD)";
-      case EPaymentType.Online:
-        return "Thanh toán trực tuyến";
-      case EPaymentType.Balance:
-        return "Thanh toán bằng điểm";
-      default:
-        return "";
-    }
+    orderStore.closeConfirmModal();
   };
 
   const steps = [
@@ -285,13 +241,27 @@ const Order: React.FC = () => {
     },
   ];
 
-  if (loading) {
+  if (orderStore.loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <Spin size="large" tip="Đang tải thông tin đơn hàng..." />
+        <Spin size="large">
+          <div className="p-12">
+            <p className="text-gray-600 mt-4">Đang tải thông tin đơn hàng...</p>
+          </div>
+        </Spin>
       </div>
     );
   }
+
+  // Kiểm tra nếu là mua ngay
+  if (directPurchase && product) {
+    // Xử lý với sản phẩm từ mua ngay
+    console.log("Direct purchase product:", product, "quantity:", quantity);
+  }
+
+  // Thêm debug để xem cartItems
+  console.log("Order store cartItems:", orderStore.cartItems);
+  console.log("Order store total:", orderStore.total);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -320,7 +290,7 @@ const Order: React.FC = () => {
 
       {/* Steps */}
       <Steps
-        current={currentStep}
+        current={orderStore.currentStep}
         className="mb-8 hidden md:flex"
         items={steps.map((step) => ({
           title: step.title,
@@ -337,7 +307,7 @@ const Order: React.FC = () => {
             initialValues={initialValues}
             onFinish={handleFormSubmit}
           >
-            {currentStep === 0 && (
+            {orderStore.currentStep === 0 && (
               <Card className="mb-6">
                 <h2 className="text-lg font-bold mb-4">Thông tin giao hàng</h2>
 
@@ -392,7 +362,7 @@ const Order: React.FC = () => {
                     ]}
                   >
                     <Select placeholder="Chọn tỉnh/thành phố">
-                      {provinces.map((province) => (
+                      {orderStore.provinces.map((province) => (
                         <Option key={province} value={province}>
                           {province}
                         </Option>
@@ -411,7 +381,7 @@ const Order: React.FC = () => {
                     ]}
                   >
                     <Select placeholder="Chọn quận/huyện">
-                      {districts.map((district) => (
+                      {orderStore.districts.map((district) => (
                         <Option key={district} value={district}>
                           {district}
                         </Option>
@@ -430,7 +400,7 @@ const Order: React.FC = () => {
                     ]}
                   >
                     <Select placeholder="Chọn phường/xã">
-                      {wards.map((ward) => (
+                      {orderStore.wards.map((ward) => (
                         <Option key={ward} value={ward}>
                           {ward}
                         </Option>
@@ -458,7 +428,7 @@ const Order: React.FC = () => {
               </Card>
             )}
 
-            {currentStep === 1 && (
+            {orderStore.currentStep === 1 && (
               <Card className="mb-6">
                 <h2 className="text-lg font-bold mb-4">
                   Phương thức thanh toán
@@ -529,28 +499,33 @@ const Order: React.FC = () => {
             )}
 
             <div className="flex justify-between mt-6">
-              {currentStep > 0 ? (
-                <Button
-                  icon={<LeftOutlined />}
+              {orderStore.currentStep > 0 ? (
+                <button
                   onClick={handlePreviousStep}
-                  disabled={submitting}
+                  disabled={orderStore.submitting}
+                  className="py-2 px-4 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
                 >
+                  <LeftOutlined className="mr-2" />
                   Quay lại
-                </Button>
+                </button>
               ) : (
-                <Link to="/gio-hang">
-                  <Button icon={<LeftOutlined />} disabled={submitting}>
+                <Link to="/cart">
+                  <button
+                    disabled={orderStore.submitting}
+                    className="py-2 px-4 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
+                  >
+                    <LeftOutlined className="mr-2" />
                     Quay lại giỏ hàng
-                  </Button>
+                  </button>
                 </Link>
               )}
 
-              {currentStep < steps.length - 1 ? (
+              {orderStore.currentStep < steps.length - 1 ? (
                 <Button
                   type="primary"
+                  className="override-ant-btn"
                   onClick={handleNextStep}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={submitting}
+                  disabled={orderStore.submitting}
                 >
                   Tiếp tục
                 </Button>
@@ -567,8 +542,8 @@ const Order: React.FC = () => {
                         console.log("Validate Failed:", info);
                       });
                   }}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={submitting}
+                  className="override-ant-btn"
+                  disabled={orderStore.submitting}
                 >
                   Xác nhận đặt hàng
                 </Button>
@@ -582,38 +557,73 @@ const Order: React.FC = () => {
           <Card className="sticky top-6">
             <h2 className="text-lg font-bold mb-4">Đơn hàng của bạn</h2>
             <div className="max-h-80 overflow-y-auto mb-4">
-              {cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center py-3 border-b border-gray-100"
-                >
+              {/* Kiểm tra nếu orderStore.cartItems rỗng và là direct purchase */}
+              {orderStore.cartItems.length > 0 ? (
+                orderStore.cartItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center py-3 border-b border-gray-100"
+                  >
+                    <div className="w-16 h-16 flex-shrink-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    </div>
+                    <div className="ml-3 flex-grow">
+                      <p className="text-sm font-medium line-clamp-2">
+                        {item.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {orderStore.formatPrice(item.price)} x {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        {orderStore.formatPrice(item.price * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : directPurchase && product ? (
+                // Fallback: Hiển thị sản phẩm trực tiếp từ location.state
+                <div className="flex items-center py-3 border-b border-gray-100">
                   <div className="w-16 h-16 flex-shrink-0">
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={product.image}
+                      alt={product.name}
                       className="w-full h-full object-cover rounded-md"
                     />
                   </div>
                   <div className="ml-3 flex-grow">
                     <p className="text-sm font-medium line-clamp-2">
-                      {item.name}
+                      {product.name}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {formatPrice(item.price)} x {item.quantity}
+                      {orderStore.formatPrice(product.price)} x {quantity || 1}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      {formatPrice(item.price * item.quantity)}
+                      {orderStore.formatPrice(product.price * (quantity || 1))}
                     </p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Không có sản phẩm nào
+                </div>
+              )}
             </div>
             <Divider className="my-3" />
             <div className="flex justify-between mb-2">
               <span>Tạm tính:</span>
-              <span>{formatPrice(calculateSubtotal())}</span>
+              <span>
+                {directPurchase && product && orderStore.cartItems.length === 0
+                  ? orderStore.formatPrice(product.price * (quantity || 1))
+                  : orderStore.formatPrice(orderStore.subtotal)}
+              </span>
             </div>
             <div className="flex justify-between mb-2">
               <span>Phí vận chuyển:</span>
@@ -623,7 +633,9 @@ const Order: React.FC = () => {
             <div className="flex justify-between text-lg font-bold mb-4">
               <span>Tổng cộng:</span>
               <span className="text-green-600">
-                {formatPrice(calculateTotal())}
+                {directPurchase && product && orderStore.cartItems.length === 0
+                  ? orderStore.formatPrice(product.price * (quantity || 1))
+                  : orderStore.formatPrice(orderStore.total)}
               </span>
             </div>
           </Card>
@@ -638,57 +650,199 @@ const Order: React.FC = () => {
             Xác nhận đặt hàng
           </div>
         }
-        open={showConfirmModal}
+        open={orderStore.showConfirmModal}
         onOk={handleConfirmOrder}
         onCancel={handleCancelOrder}
         okText="Đặt hàng"
         cancelText="Hủy"
-        confirmLoading={submitting}
+        confirmLoading={orderStore.submitting}
         okButtonProps={{
-          className: "bg-green-600 hover:bg-green-700",
+          className: "override-ant-btn",
         }}
-        width={600}
+        cancelButtonProps={{
+          className: "override-cancel-btn",
+        }}
+        width={700}
       >
         <div className="py-4">
-          <p className="mb-4 text-gray-600">
+          <p className="mb-6 text-gray-600">
             Bạn có chắc chắn muốn đặt hàng với thông tin sau không?
           </p>
 
-          {orderFormData && (
+          {orderStore.orderFormData && (
             <div className="space-y-4">
+              {/* Thông tin giao hàng */}
               <div className="bg-gray-50 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Thông tin giao hàng:</h4>
-                <p>
-                  <strong>Người nhận:</strong> {orderFormData.fullName}
-                </p>
-                <p>
-                  <strong>Số điện thoại:</strong> {orderFormData.phone}
-                </p>
-                <p>
-                  <strong>Email:</strong> {orderFormData.email}
-                </p>
-                <p>
-                  <strong>Địa chỉ:</strong> {orderFormData.address},{" "}
-                  {orderFormData.ward}, {orderFormData.district},{" "}
-                  {orderFormData.province}
-                </p>
-                {orderFormData.notes && (
+                <h4 className="font-medium mb-3 text-gray-800 flex items-center">
+                  <UserOutlined className="mr-2 text-green-600" />
+                  Thông tin giao hàng
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <p>
-                    <strong>Ghi chú:</strong> {orderFormData.notes}
+                    <strong className="text-gray-700">Người nhận:</strong>{" "}
+                    <span className="ml-2">
+                      {orderStore.orderFormData.fullName}
+                    </span>
                   </p>
-                )}
+                  <p>
+                    <strong className="text-gray-700">Số điện thoại:</strong>{" "}
+                    <span className="ml-2">
+                      {orderStore.orderFormData.phone}
+                    </span>
+                  </p>
+                  <p className="md:col-span-2">
+                    <strong className="text-gray-700">Email:</strong>{" "}
+                    <span className="ml-2">
+                      {orderStore.orderFormData.email}
+                    </span>
+                  </p>
+                  <p className="md:col-span-2">
+                    <strong className="text-gray-700">Địa chỉ:</strong>{" "}
+                    <span className="ml-2">
+                      {orderStore.orderFormData.address},{" "}
+                      {orderStore.orderFormData.ward},{" "}
+                      {orderStore.orderFormData.district},{" "}
+                      {orderStore.orderFormData.province}
+                    </span>
+                  </p>
+                  {orderStore.orderFormData.notes && (
+                    <p className="md:col-span-2">
+                      <strong className="text-gray-700">Ghi chú:</strong>{" "}
+                      <span className="ml-2">
+                        {orderStore.orderFormData.notes}
+                      </span>
+                    </p>
+                  )}
+                </div>
               </div>
 
+              {/* Thông tin sản phẩm */}
               <div className="bg-gray-50 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Phương thức thanh toán:</h4>
-                <p>{getPaymentMethodText(orderFormData.paymentMethod)}</p>
+                <h4 className="font-medium mb-3 text-gray-800 flex items-center">
+                  <ShoppingCartOutlined className="mr-2 text-green-600" />
+                  Sản phẩm đặt hàng (
+                  {orderStore.cartItems.length > 0
+                    ? orderStore.cartItems.length
+                    : directPurchase && product
+                    ? 1
+                    : 0}{" "}
+                  sản phẩm)
+                </h4>
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {orderStore.cartItems.length > 0 ? (
+                    orderStore.cartItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center space-x-3 p-2 bg-white rounded border"
+                      >
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm line-clamp-1">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {orderStore.formatPrice(item.price)} ×{" "}
+                            {item.quantity}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-sm text-green-600">
+                            {orderStore.formatPrice(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : directPurchase && product ? (
+                    <div className="flex items-center space-x-3 p-2 bg-white rounded border">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm line-clamp-1">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {orderStore.formatPrice(product.price)} ×{" "}
+                          {quantity || 1}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-sm text-green-600">
+                          {orderStore.formatPrice(
+                            product.price * (quantity || 1)
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-4">
+                      Không có sản phẩm nào
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* Phương thức thanh toán */}
               <div className="bg-gray-50 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Tổng tiền:</h4>
-                <p className="text-lg font-bold text-green-600">
-                  {formatPrice(calculateTotal())}
+                <h4 className="font-medium mb-3 text-gray-800 flex items-center">
+                  <CreditCardOutlined className="mr-2 text-green-600" />
+                  Phương thức thanh toán
+                </h4>
+                <p className="text-sm">
+                  {orderStore.getPaymentMethodText(
+                    orderStore.orderFormData.paymentMethod
+                  )}
                 </p>
+              </div>
+
+              {/* Tổng tiền */}
+              <div className="bg-green-50 p-4 rounded-md border border-green-200">
+                <h4 className="font-medium mb-3 text-gray-800">
+                  Chi tiết thanh toán
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tạm tính:</span>
+                    <span className="font-medium">
+                      {directPurchase &&
+                      product &&
+                      orderStore.cartItems.length === 0
+                        ? orderStore.formatPrice(
+                            product.price * (quantity || 1)
+                          )
+                        : orderStore.formatPrice(orderStore.subtotal)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Phí vận chuyển:</span>
+                    <span className="font-medium text-green-600">Miễn phí</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Giảm giá:</span>
+                    <span className="font-medium">0 đ</span>
+                  </div>
+                  <Divider className="my-2" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-800">
+                      Tổng cộng:
+                    </span>
+                    <span className="text-xl font-bold text-green-600">
+                      {directPurchase &&
+                      product &&
+                      orderStore.cartItems.length === 0
+                        ? orderStore.formatPrice(
+                            product.price * (quantity || 1)
+                          )
+                        : orderStore.formatPrice(orderStore.total)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -696,6 +850,6 @@ const Order: React.FC = () => {
       </Modal>
     </div>
   );
-};
+});
 
 export default Order;

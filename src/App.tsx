@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ClientLayout from "./layouts/ClientLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import { ConfigProvider } from "antd";
+import { StoreProvider } from "./stores";
 
 // Client pages
 import HomePage from "./pages/client/home/Home";
@@ -24,37 +25,39 @@ import AdminOrder from "./pages/admin/order/OrderList";
 function App() {
   return (
     <ConfigProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Client Routes */}
-          <Route path="/" element={<ClientLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="products" element={<ProductsPage />} />
-            <Route path="products/:id" element={<ProductDetailPage />} />
-            <Route path="cart" element={<CartPage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="order" element={<OderPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Route>
+      <StoreProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Client Routes */}
+            <Route path="/" element={<ClientLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="products/:id" element={<ProductDetailPage />} />
+              <Route path="cart" element={<CartPage />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="order" element={<OderPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+            </Route>
 
-          {/* Admin Login - đặt độc lập không dùng layout */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin Login - đặt độc lập không dùng layout */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Các trang Admin khác - có header và sidebar */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<div>Admin Dashboard</div>} />
-            <Route path="products" element={<AdminProducts />} />
-            <Route path="categories" element={<AdminCategory />} />
-            <Route path="customers" element={<CustomerPage />} />
-            <Route path="orders" element={<AdminOrder />} />
-            {/* Thêm các route khác cho admin nếu cần */}
-          </Route>
+            {/* Các trang Admin khác - có header và sidebar */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<div>Admin Dashboard</div>} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="categories" element={<AdminCategory />} />
+              <Route path="customers" element={<CustomerPage />} />
+              <Route path="orders" element={<AdminOrder />} />
+              {/* Thêm các route khác cho admin nếu cần */}
+            </Route>
 
-          {/* Route mặc định */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Route mặc định */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </StoreProvider>
     </ConfigProvider>
   );
 }

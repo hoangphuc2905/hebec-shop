@@ -3,5 +3,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  description?: string;
   image: string;
+  importPrice?: number; // Thêm dòng này
 }

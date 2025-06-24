@@ -1,68 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { observer } from "mobx-react-lite";
 import {
   ShoppingCartOutlined,
   DeleteOutlined,
   LeftOutlined,
   ShoppingOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { Button, InputNumber, Spin, message } from "antd";
+import { Button, InputNumber, Spin, message, Modal } from "antd";
+import { useStore } from "../../../stores";
 import type { CartItem } from "../../../types/interfaces/cartItem.interface";
+import "../../../styles/override.css";
 
-const Cart: React.FC = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+const Cart: React.FC = observer(() => {
+  const { cartStore } = useStore();
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const navigate = useNavigate();
 
-  const saveCartToLocalStorage = (items: CartItem[]) => {
-    localStorage.setItem("cart", JSON.stringify(items));
-    window.dispatchEvent(new Event("cart-updated"));
-  };
-
-  useEffect(() => {
-    // Lấy giỏ hàng từ localStorage
-    const loadCart = () => {
-      try {
-        const savedCart = localStorage.getItem("cart");
-        if (savedCart) {
-          setCartItems(JSON.parse(savedCart));
-        }
-      } catch (error) {
-        console.error("Error loading cart from localStorage:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCart();
-  }, []);
-
   const handleQuantityChange = (id: string, quantity: number) => {
-    if (quantity < 1) return;
-
-    const updatedItems = cartItems.map((item) =>
-      item.id === id ? { ...item, quantity } : item
-    );
-
-    setCartItems(updatedItems);
-    saveCartToLocalStorage(updatedItems);
+    cartStore.updateQuantity(id, quantity);
   };
 
-  const handleRemoveItem = (id: string) => {
-    const updatedItems = cartItems.filter((item) => item.id !== id);
-    setCartItems(updatedItems);
-    saveCartToLocalStorage(updatedItems);
+  const handleShowDeleteModal = (item: CartItem) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
   };
 
-  const calculateTotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      cartStore.removeFromCart(itemToDelete.id);
+    }
+    setShowDeleteModal(false);
+    setItemToDelete(null);
   };
 
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setItemToDelete(null);
   };
 
   const handleProceedToOrder = () => {
@@ -70,7 +46,6 @@ const Cart: React.FC = () => {
 
     if (!token) {
       message.warning("Vui lòng đăng nhập để tiến hành đặt hàng.");
-
       localStorage.setItem("redirectAfterLogin", "/order");
       navigate("/login");
       return;
@@ -79,10 +54,11 @@ const Cart: React.FC = () => {
     navigate("/order");
   };
 
-  if (loading) {
+  if (cartStore.loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <Spin size="large" tip="Đang tải giỏ hàng..." />
+        <Spin size="large" />
+        <p className="text-gray-600 mt-4 ml-4">Đang tải giỏ hàng...</p>
       </div>
     );
   }
@@ -100,8 +76,9 @@ const Cart: React.FC = () => {
           </li>
           <li className="flex items-center text-gray-800">Giỏ hàng</li>
         </ol>
-      </nav>{" "}
-      {cartItems.length > 0 ? (
+      </nav>
+
+      {!cartStore.isEmpty ? (
         <div>
           <h1 className="text-3xl font-bold mb-8 text-gray-800">
             Giỏ hàng của bạn
@@ -114,12 +91,12 @@ const Cart: React.FC = () => {
                 <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-100">
                   <h2 className="text-xl font-semibold text-gray-800 flex items-center">
                     <ShoppingCartOutlined className="mr-3 text-green-600" />
-                    Sản phẩm đã chọn ({cartItems.length} sản phẩm)
+                    Sản phẩm đã chọn ({cartStore.totalItems} sản phẩm)
                   </h2>
                 </div>
 
                 <div className="divide-y divide-gray-100">
-                  {cartItems.map((item) => (
+                  {cartStore.cartItems.map((item) => (
                     <div
                       key={item.id}
                       className="p-6 hover:bg-gray-50 transition-colors duration-200"
@@ -143,9 +120,24 @@ const Cart: React.FC = () => {
                             {item.name}
                           </Link>
 
+                          {/* Thêm mô tả sản phẩm */}
+                          {item.description && (
+                            <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+
                           <div className="mt-2 flex items-center justify-between">
-                            <div className="text-lg font-semibold text-green-600">
-                              {formatPrice(item.price)}
+                            <div className="flex flex-col">
+                              {item.importPrice &&
+                                item.importPrice > item.price && (
+                                  <span className="text-sm line-through text-gray-400 mb-1">
+                                    {cartStore.formatPrice(item.importPrice)}
+                                  </span>
+                                )}
+                              <span className="text-lg font-semibold text-green-600">
+                                {cartStore.formatPrice(item.price)}
+                              </span>
                             </div>
 
                             <div className="flex items-center space-x-3">
@@ -170,8 +162,8 @@ const Cart: React.FC = () => {
 
                               {/* Remove Button */}
                               <Button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                onClick={() => handleShowDeleteModal(item)}
+                                className="override-delete-btn"
                                 size="small"
                                 icon={<DeleteOutlined />}
                               >
@@ -187,7 +179,9 @@ const Cart: React.FC = () => {
                                 Thành tiền:
                               </span>
                               <span className="text-lg font-bold text-gray-800">
-                                {formatPrice(item.price * item.quantity)}
+                                {cartStore.formatPrice(
+                                  item.price * item.quantity
+                                )}
                               </span>
                             </div>
                           </div>
@@ -201,13 +195,10 @@ const Cart: React.FC = () => {
               {/* Continue Shopping Button */}
               <div className="mt-6">
                 <Link to="/products">
-                  <Button
-                    size="large"
-                    className="flex items-center space-x-2 hover:bg-gray-50 border-gray-300"
-                    icon={<LeftOutlined />}
-                  >
+                  <button className="py-2 px-4 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors">
+                    <LeftOutlined className="mr-2" />
                     <span>Tiếp tục mua sắm</span>
-                  </Button>
+                  </button>
                 </Link>
               </div>
             </div>
@@ -227,7 +218,7 @@ const Cart: React.FC = () => {
                     <div className="flex justify-between items-center py-2">
                       <span className="text-gray-600">Tạm tính:</span>
                       <span className="font-medium text-gray-800">
-                        {formatPrice(calculateTotal())}
+                        {cartStore.formatPrice(cartStore.totalPrice)}
                       </span>
                     </div>
 
@@ -249,18 +240,19 @@ const Cart: React.FC = () => {
                           Tổng cộng:
                         </span>
                         <span className="text-2xl font-bold text-green-600">
-                          {formatPrice(calculateTotal())}
+                          {cartStore.formatPrice(cartStore.totalPrice)}
                         </span>
                       </div>
                     </div>
-                  </div>{" "}
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="space-y-3">
                     <Button
                       type="primary"
                       size="large"
                       block
-                      className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 h-12 text-base font-semibold"
+                      className="override-ant-btn"
                       onClick={handleProceedToOrder}
                     >
                       Tiến hành đặt hàng
@@ -282,7 +274,8 @@ const Cart: React.FC = () => {
                   className="text-gray-400"
                 />
               </div>
-            </div>{" "}
+            </div>
+
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
               Giỏ hàng trống!
             </h2>
@@ -314,8 +307,58 @@ const Cart: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal xác nhận xóa sản phẩm */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <ExclamationCircleOutlined className="text-orange-500 mr-2" />
+            Xác nhận xóa sản phẩm
+          </div>
+        }
+        open={showDeleteModal}
+        onOk={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{
+          className: "override-delete-confirm-btn",
+          danger: true,
+        }}
+        cancelButtonProps={{
+          className: "override-cancel-btn",
+        }}
+        width={500}
+      >
+        <div className="py-4">
+          {itemToDelete && (
+            <div>
+              <p className="mb-4 text-gray-600">
+                Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng không?
+              </p>
+
+              <div className="bg-gray-50 p-4 rounded-md flex items-center space-x-4">
+                <img
+                  src={itemToDelete.image}
+                  alt={itemToDelete.name}
+                  className="w-16 h-16 object-cover rounded-md"
+                />
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-800 line-clamp-2">
+                    {itemToDelete.name}
+                  </h4>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Số lượng: {itemToDelete.quantity} | Giá:{" "}
+                    {cartStore.formatPrice(itemToDelete.price)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
-};
+});
 
 export default Cart;

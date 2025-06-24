@@ -4,9 +4,11 @@ import { ShareAltOutlined, HeartOutlined } from "@ant-design/icons";
 import { Button, Image, Input, message } from "antd";
 import { getProductById } from "../../../api/productApi";
 import type { Product } from "../../../types/interfaces/product.interface";
-import type { CartItem } from "../../../types/interfaces/cartItem.interface";
+import { useStore } from "../../../stores";
+import { observer } from "mobx-react-lite";
 
-const ProductDetail = () => {
+const ProductDetail: React.FC = observer(() => {
+  const { cartStore } = useStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
@@ -90,43 +92,25 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Lấy giỏ hàng hiện tại từ localStorage
-    const cartJson = localStorage.getItem("cart");
-    const cart: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
-
-    const existingItemIndex = cart.findIndex(
-      (item) => String(item.id) === String(product.id)
-    );
-
-    if (existingItemIndex !== -1) {
-      cart[existingItemIndex].quantity += quantity;
-    } else {
-      const newItem: CartItem = {
+    cartStore.addToCart(
+      {
         id: String(product.id),
         name: product.name,
         price: product.finalPrice,
-        quantity: quantity,
+        importPrice: product.importPrice,
+        description: product.description || "",
         image: product.image || "",
-      };
-      cart.push(newItem);
-    }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    // Dispatch event để cập nhật số lượng giỏ hàng trên header
-    window.dispatchEvent(new Event("cart-updated"));
-
-    message.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
+      },
+      quantity
+    );
   };
   const handleBuyNow = () => {
     if (!product) return;
 
-    // Kiểm tra token đăng nhập
     const token = localStorage.getItem("token");
 
     if (!token) {
       message.warning("Vui lòng đăng nhập để tiến hành mua hàng.");
-
       localStorage.setItem("redirectAfterLogin", `/products/${product.id}`);
       localStorage.setItem(
         "buyNowProduct",
@@ -135,19 +119,20 @@ const ProductDetail = () => {
           quantity: quantity,
         })
       );
-
       navigate("/login");
       return;
     }
 
-    // Đã đăng nhập, thêm sản phẩm vào giỏ hàng
-    handleAddToCart();
-
-    // Chuyển hướng đến trang order với sản phẩm đã chọn
+    // Truyền dữ liệu qua state thay vì URL params
     navigate("/order", {
       state: {
         directPurchase: true,
-        productId: product.id,
+        product: {
+          id: String(product.id),
+          name: product.name,
+          price: product.finalPrice,
+          image: product.image || "",
+        },
         quantity: quantity,
       },
     });
@@ -271,15 +256,17 @@ const ProductDetail = () => {
           )}
 
           <div className="flex items-center mb-4 space-x-3">
-            <span className="text-2xl font-bold text-green-600">
-              {formatPrice(product.finalPrice)}
-            </span>
-
-            {product.finalPrice < product.unitPrice && (
-              <span className="text-sm line-through text-gray-500">
-                {formatPrice(product.unitPrice)}
+            <div className="flex flex-col">
+              {product.importPrice &&
+                product.importPrice > product.finalPrice && (
+                  <span className="text-sm line-through text-gray-500 mb-1">
+                    {formatPrice(product.importPrice)}
+                  </span>
+                )}
+              <span className="text-2xl font-bold text-green-600">
+                {formatPrice(product.finalPrice)}
               </span>
-            )}
+            </div>
           </div>
 
           {/* Quantity Selector */}
@@ -415,6 +402,6 @@ const ProductDetail = () => {
       </div>
     </div>
   );
-};
+});
 
 export default ProductDetail;

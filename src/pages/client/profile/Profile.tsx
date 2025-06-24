@@ -27,162 +27,13 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import type { UploadFile } from "antd/es/upload/interface";
 import { getCustomerProfile } from "../../../api/customerApi";
+import { getCustomerOrderList } from "../../../api/orderApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
+import type { Order } from "../../../types/interfaces/order.interface";
+import "../../../styles/override.css";
 
-// Định nghĩa enum cho OrderStatus
-enum OrderStatus {
-  PENDING = "PENDING",
-  PROCESSING = "PROCESSING",
-  SHIPPED = "SHIPPED",
-  DELIVERED = "DELIVERED",
-  CANCELLED = "CANCELLED",
-  RETURNED = "RETURNED",
-  REFUNDED = "REFUNDED",
-}
-
-// Định nghĩa interface OrderItem
-interface OrderItem {
-  productId: string;
-  quantity: number;
-  price: number;
-  productName: string;
-  productImage?: string;
-}
-
-// Định nghĩa interface ShippingAddress
-interface ShippingAddress {
-  fullName: string;
-  phone: string;
-  email?: string;
-  address: string;
-  ward: string;
-  district: string;
-  province: string;
-}
-
-// Định nghĩa interface Order
-interface Order {
-  id: string;
-  userId: string;
-  items: OrderItem[];
-  shippingAddress: ShippingAddress;
-  paymentMethod: string;
-  shippingMethod: string;
-  shippingFee: number;
-  subtotal: number;
-  totalAmount: number;
-  status: OrderStatus;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 const { TabPane } = Tabs;
-
-// Dữ liệu mẫu cho orders - sẽ được thay thế sau này với API orders
-const mockOrders: Order[] = [
-  {
-    id: "order-1234567",
-    userId: "user-1",
-    items: [
-      {
-        productId: "prod-1",
-        quantity: 2,
-        price: 78000,
-        productName: "143 Món Khai Vị Hấp Dẫn",
-        productImage:
-          "https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg",
-      },
-      {
-        productId: "prod-2",
-        quantity: 1,
-        price: 82000,
-        productName: "Trẻ Lâu Đẹp Dáng",
-        productImage:
-          "https://salt.tikicdn.com/cache/280x280/ts/product/65/ae/44/73256656d447425db7510a9ac5d84a12.jpg",
-      },
-    ],
-    shippingAddress: {
-      fullName: "Nguyễn Văn A",
-      phone: "0901234567",
-      email: "nguyenvana@example.com",
-      address: "123 Đường Nguyễn Huệ",
-      ward: "Phường Bến Nghé",
-      district: "Quận 1",
-      province: "TP. Hồ Chí Minh",
-    },
-    paymentMethod: "COD",
-    shippingMethod: "STANDARD",
-    shippingFee: 0,
-    subtotal: 238000,
-    totalAmount: 238000,
-    status: OrderStatus.DELIVERED,
-    createdAt: "2023-06-15T08:30:00.000Z",
-    updatedAt: "2023-06-17T14:20:00.000Z",
-  },
-  {
-    id: "order-7654321",
-    userId: "user-1",
-    items: [
-      {
-        productId: "prod-3",
-        quantity: 1,
-        price: 95000,
-        productName: "Nấu Ăn Thực Dưỡng",
-        productImage:
-          "https://salt.tikicdn.com/cache/280x280/ts/product/c1/64/b2/2cbacd97d8e01786dd7c17052cafdd4c.jpg",
-      },
-    ],
-    shippingAddress: {
-      fullName: "Nguyễn Văn A",
-      phone: "0901234567",
-      email: "nguyenvana@example.com",
-      address: "123 Đường Nguyễn Huệ",
-      ward: "Phường Bến Nghé",
-      district: "Quận 1",
-      province: "TP. Hồ Chí Minh",
-    },
-    paymentMethod: "BANK_TRANSFER",
-    shippingMethod: "EXPRESS",
-    shippingFee: 30000,
-    subtotal: 95000,
-    totalAmount: 125000,
-    status: OrderStatus.PENDING,
-    createdAt: "2023-06-20T10:15:00.000Z",
-    updatedAt: "2023-06-20T10:15:00.000Z",
-  },
-  {
-    id: "order-9876543",
-    userId: "user-1",
-    items: [
-      {
-        productId: "prod-4",
-        quantity: 3,
-        price: 45000,
-        productName: "Món Ngon Mỗi Ngày",
-        productImage:
-          "https://salt.tikicdn.com/cache/280x280/ts/product/aa/bb/cc/3abcd97d8e01786dd7c17052cafdd4c.jpg",
-      },
-    ],
-    shippingAddress: {
-      fullName: "Nguyễn Văn A",
-      phone: "0901234567",
-      email: "nguyenvana@example.com",
-      address: "123 Đường Nguyễn Huệ",
-      ward: "Phường Bến Nghé",
-      district: "Quận 1",
-      province: "TP. Hồ Chí Minh",
-    },
-    paymentMethod: "COD",
-    shippingMethod: "STANDARD",
-    shippingFee: 0,
-    subtotal: 135000,
-    totalAmount: 135000,
-    status: OrderStatus.SHIPPED,
-    createdAt: "2023-06-18T15:45:00.000Z",
-    updatedAt: "2023-06-19T09:30:00.000Z",
-  },
-];
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<Customer | null>(null);
@@ -198,6 +49,26 @@ const Profile: React.FC = () => {
     useState<boolean>(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const navigate = useNavigate();
+
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const response = await getCustomerOrderList();
+
+      if (response?.data?.orders) {
+        setOrders(response.data.orders);
+      } else {
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error("Không thể lấy danh sách đơn hàng:", error);
+      message.error("Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.");
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -245,9 +116,7 @@ const Profile: React.FC = () => {
     };
 
     fetchUserProfile();
-
-    setOrders(mockOrders);
-    setLoadingOrders(false);
+    fetchOrders();
   }, [profileForm, navigate]);
 
   const handleProfileUpdate = async (values: any) => {
@@ -284,29 +153,40 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleCancelOrder = (orderId: string) => {
-    const updatedOrders = orders.map((order) => {
-      if (order.id === orderId) {
-        return {
-          ...order,
-          status: OrderStatus.CANCELLED,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return order;
-    });
-
-    setOrders(updatedOrders);
-
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder({
-        ...selectedOrder,
-        status: OrderStatus.CANCELLED,
-        updatedAt: new Date().toISOString(),
+  const handleCancelOrder = async (orderId: number) => {
+    try {
+      // Cập nhật trạng thái order local trước
+      const updatedOrders = orders.map((order) => {
+        if (order.id === orderId) {
+          return {
+            ...order,
+            status: "CANCELLED",
+            updatedAt: Math.floor(Date.now() / 1000),
+          };
+        }
+        return order;
       });
-    }
 
-    message.success("Đơn hàng đã được hủy");
+      setOrders(updatedOrders);
+
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          status: "CANCELLED",
+          updatedAt: Math.floor(Date.now() / 1000),
+        });
+      }
+
+      message.success("Đơn hàng đã được hủy");
+
+      // Reload lại danh sách đơn hàng từ server
+      await fetchOrders();
+    } catch (error) {
+      console.error("Lỗi khi hủy đơn hàng:", error);
+      message.error("Không thể hủy đơn hàng. Vui lòng thử lại sau.");
+      // Reload lại để đồng bộ dữ liệu
+      await fetchOrders();
+    }
   };
 
   const showOrderDetail = (order: Order) => {
@@ -314,42 +194,42 @@ const Profile: React.FC = () => {
     setOrderDetailModalVisible(true);
   };
 
-  const getStatusColor = (status: OrderStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case OrderStatus.PENDING:
+      case "PENDING":
         return "orange";
-      case OrderStatus.PROCESSING:
+      case "PROCESSING":
         return "blue";
-      case OrderStatus.SHIPPED:
+      case "SHIPPED":
         return "cyan";
-      case OrderStatus.DELIVERED:
+      case "DELIVERED":
         return "green";
-      case OrderStatus.CANCELLED:
+      case "CANCELLED":
         return "red";
-      case OrderStatus.RETURNED:
+      case "RETURNED":
         return "purple";
-      case OrderStatus.REFUNDED:
+      case "REFUNDED":
         return "geekblue";
       default:
         return "default";
     }
   };
 
-  const getStatusText = (status: OrderStatus) => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case OrderStatus.PENDING:
+      case "PENDING":
         return "Chờ xác nhận";
-      case OrderStatus.PROCESSING:
+      case "PROCESSING":
         return "Đang xử lý";
-      case OrderStatus.SHIPPED:
+      case "SHIPPED":
         return "Đang giao hàng";
-      case OrderStatus.DELIVERED:
+      case "DELIVERED":
         return "Đã giao hàng";
-      case OrderStatus.CANCELLED:
+      case "CANCELLED":
         return "Đã hủy";
-      case OrderStatus.RETURNED:
+      case "RETURNED":
         return "Đã trả hàng";
-      case OrderStatus.REFUNDED:
+      case "REFUNDED":
         return "Đã hoàn tiền";
       default:
         return status;
@@ -360,8 +240,8 @@ const Profile: React.FC = () => {
     return `${price.toLocaleString("vi-VN")} đ`;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp * 1000); // Convert từ timestamp sang milliseconds
     return date.toLocaleDateString("vi-VN", {
       year: "numeric",
       month: "2-digit",
@@ -374,22 +254,20 @@ const Profile: React.FC = () => {
   const orderColumns = [
     {
       title: "Mã đơn hàng",
-      dataIndex: "id",
-      key: "id",
-      render: (id: string) => (
-        <span className="font-medium">#{id.slice(-8).toUpperCase()}</span>
-      ),
+      dataIndex: "code",
+      key: "code",
+      render: (code: string) => <span className="font-medium">#{code}</span>,
     },
     {
       title: "Ngày đặt",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: string) => formatDate(date),
+      render: (timestamp: number) => formatDate(timestamp),
     },
     {
       title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
+      dataIndex: "totalMoney",
+      key: "totalMoney",
       render: (amount: number) => (
         <span className="font-medium">{formatPrice(amount)}</span>
       ),
@@ -398,7 +276,7 @@ const Profile: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: OrderStatus) => (
+      render: (status: string) => (
         <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
       ),
     },
@@ -541,7 +419,7 @@ const Profile: React.FC = () => {
                   <Button
                     type="primary"
                     htmlType="submit"
-                    className="bg-green-600 hover:bg-green-700"
+                    className="override-ant-btn"
                     loading={loading}
                   >
                     Cập nhật thông tin
@@ -595,39 +473,6 @@ const Profile: React.FC = () => {
                 </Link>
               </div>
             )}
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span className="flex items-center">
-                <HomeOutlined className="mr-2" />
-                Sổ địa chỉ
-              </span>
-            }
-            key="addresses"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card
-                title="Địa chỉ mặc định"
-                extra={<Button type="text" icon={<EditOutlined />} />}
-              >
-                {user?.address ? (
-                  <address className="not-italic">
-                    <p className="font-medium">{user.fullName}</p>
-                    {user.phone && <p>Điện thoại: {user.phone}</p>}
-                    <p>{user.address}</p>
-                  </address>
-                ) : (
-                  <p className="text-gray-500">Chưa có địa chỉ mặc định</p>
-                )}
-              </Card>
-
-              <Card className="border-dashed border-2 flex items-center justify-center h-[180px]">
-                <Button type="dashed" icon={<PlusOutlined />}>
-                  Thêm địa chỉ mới
-                </Button>
-              </Card>
-            </div>
           </TabPane>
         </Tabs>
       </div>
@@ -719,9 +564,7 @@ const Profile: React.FC = () => {
             <div className="bg-gray-50 p-4 rounded-md mb-4">
               <div className="flex justify-between items-center mb-3">
                 <div>
-                  <h3 className="font-bold">
-                    #{selectedOrder.id.slice(-8).toUpperCase()}
-                  </h3>
+                  <h3 className="font-bold">#{selectedOrder.code}</h3>
                   <p className="text-sm text-gray-500">
                     Ngày đặt: {formatDate(selectedOrder.createdAt)}
                   </p>
@@ -744,26 +587,24 @@ const Profile: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {selectedOrder.items.map((item, index) => (
-                    <tr key={index}>
+                  {selectedOrder.details.map((item) => (
+                    <tr key={item.id}>
                       <td className="py-3 px-3">
                         <div className="flex items-center">
-                          {item.productImage && (
-                            <img
-                              src={item.productImage}
-                              alt={item.productName}
-                              className="w-12 h-12 object-cover mr-3"
-                            />
-                          )}
-                          <span>{item.productName}</span>
+                          <img
+                            src={item.product.image}
+                            alt={item.product.name}
+                            className="w-12 h-12 object-cover mr-3"
+                          />
+                          <span>{item.product.name}</span>
                         </div>
                       </td>
                       <td className="py-3 px-3 text-right">
-                        {formatPrice(item.price)}
+                        {formatPrice(item.finalPrice)}
                       </td>
                       <td className="py-3 px-3 text-center">{item.quantity}</td>
                       <td className="py-3 px-3 text-right font-medium">
-                        {formatPrice(item.price * item.quantity)}
+                        {formatPrice(item.finalPrice * item.quantity)}
                       </td>
                     </tr>
                   ))}
@@ -776,19 +617,14 @@ const Profile: React.FC = () => {
                 <h4 className="font-medium mb-2">Thông tin giao hàng</h4>
                 <div className="bg-gray-50 p-3 rounded-md">
                   <p>
-                    <strong>Người nhận:</strong>{" "}
-                    {selectedOrder.shippingAddress.fullName}
+                    <strong>Người nhận:</strong> {selectedOrder.receiverName}
                   </p>
                   <p>
                     <strong>Số điện thoại:</strong>{" "}
-                    {selectedOrder.shippingAddress.phone}
+                    {selectedOrder.receiverPhone}
                   </p>
                   <p>
-                    <strong>Địa chỉ:</strong>{" "}
-                    {selectedOrder.shippingAddress.address},{" "}
-                    {selectedOrder.shippingAddress.ward},{" "}
-                    {selectedOrder.shippingAddress.district},{" "}
-                    {selectedOrder.shippingAddress.province}
+                    <strong>Địa chỉ:</strong> {selectedOrder.receiverAddress}
                   </p>
                 </div>
               </div>
@@ -798,23 +634,23 @@ const Profile: React.FC = () => {
                 <div className="bg-gray-50 p-3 rounded-md">
                   <div className="flex justify-between py-1">
                     <span>Tạm tính:</span>
-                    <span>{formatPrice(selectedOrder.subtotal)}</span>
+                    <span>{formatPrice(selectedOrder.subTotalMoney)}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span>Phí vận chuyển:</span>
-                    <span>{formatPrice(selectedOrder.shippingFee)}</span>
+                    <span>{formatPrice(selectedOrder.shipFee)}</span>
                   </div>
                   <div className="border-t mt-2 pt-2 flex justify-between font-bold">
                     <span>Tổng cộng:</span>
                     <span className="text-green-600">
-                      {formatPrice(selectedOrder.totalAmount)}
+                      {formatPrice(selectedOrder.totalMoney)}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {selectedOrder.status === OrderStatus.PENDING && (
+            {selectedOrder.status === "PENDING" && (
               <div className="mt-4 flex justify-end">
                 <Button
                   danger
