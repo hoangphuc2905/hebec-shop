@@ -41,6 +41,7 @@ const initialValues: OrderFormValues = {
   address: "",
   paymentMethod: EPaymentType.COD,
   notes: "",
+  shippingMethod: "",
 };
 
 const Order: React.FC = observer(() => {
@@ -101,8 +102,20 @@ const Order: React.FC = observer(() => {
     orderStore.openConfirmModal(values);
   };
 
-  // Thêm helper function này vào đầu component (sau các import)
-  const getOrderData = (directPurchase, product, quantity, orderStore) => {
+  const getOrderData = (
+    directPurchase: boolean,
+    product:
+      | {
+          id: string | number;
+          name: string;
+          price: number;
+          image: string;
+        }
+      | undefined,
+    quantity: number | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orderStore: any
+  ) => {
     let orderDetails = [];
     let totalAmount = 0;
 
@@ -113,14 +126,20 @@ const Order: React.FC = observer(() => {
           productId: product.id,
           quantity: quantity || 1,
           price: product.price,
-          name: product.name, // Thêm tên sản phẩm để debug
-          image: product.image, // Thêm hình ảnh để debug
+          name: product.name,
+          image: product.image,
         },
       ];
       totalAmount = product.price * (quantity || 1);
     } else if (orderStore.cartItems.length > 0) {
       // Từ giỏ hàng
-      orderDetails = orderStore.cartItems.map((item) => ({
+      orderDetails = orderStore.cartItems.map((item: {
+        id: string | number;
+        name: string;
+        price: number;
+        image: string;
+        quantity: number;
+      }) => ({
         productId: item.id,
         quantity: item.quantity,
         price: item.price,
@@ -146,17 +165,6 @@ const Order: React.FC = observer(() => {
         orderStore
       );
 
-      console.log("=== DEBUG ORDER DATA ===");
-      console.log("directPurchase:", directPurchase);
-      console.log("product:", product);
-      console.log("quantity:", quantity);
-      console.log("orderStore.cartItems:", orderStore.cartItems);
-      console.log("orderStore.total:", orderStore.total);
-      console.log("orderDetails:", orderDetails);
-      console.log("totalAmount:", totalAmount);
-      console.log("hasProducts:", hasProducts);
-      console.log("orderStore.orderFormData:", orderStore.orderFormData);
-
       if (!hasProducts) {
         console.error("Không có sản phẩm để đặt hàng");
         return;
@@ -164,6 +172,7 @@ const Order: React.FC = observer(() => {
 
       // Validate required fields
       if (
+        !orderStore.orderFormData ||
         !orderStore.orderFormData.fullName ||
         !orderStore.orderFormData.phone
       ) {
@@ -172,28 +181,17 @@ const Order: React.FC = observer(() => {
       }
 
       // Tạo Details array và validate
-      const detailsArray = orderDetails.map((item) => ({
+      const detailsArray = orderDetails.map((item: {
+        productId: string | number;
+        quantity: number;
+        price: number;
+        name?: string;
+        image?: string;
+      }) => ({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
       }));
-
-      console.log("=== DETAILS ARRAY VALIDATION ===");
-      console.log("detailsArray:", detailsArray);
-      console.log("detailsArray.length:", detailsArray.length);
-      console.log("Array.isArray(detailsArray):", Array.isArray(detailsArray));
-
-      // Validate từng item trong Details
-      detailsArray.forEach((item, index) => {
-        console.log(`Detail ${index}:`, item);
-        console.log(
-          `  - productId: ${item.productId} (type: ${typeof item.productId})`
-        );
-        console.log(
-          `  - quantity: ${item.quantity} (type: ${typeof item.quantity})`
-        );
-        console.log(`  - price: ${item.price} (type: ${typeof item.price})`);
-      });
 
       const orderData = {
         ...orderStore.orderFormData,
@@ -201,24 +199,16 @@ const Order: React.FC = observer(() => {
         totalAmount: totalAmount,
         shippingFee: 0,
         discount: 0,
-        directPurchase: directPurchase || false, // Đảm bảo có giá trị boolean
+        directPurchase: directPurchase || false, 
       };
 
-      console.log("=== FINAL ORDER DATA FOR API ===");
-      console.log(JSON.stringify(orderData, null, 2));
-
-      // Validate final data trước khi gửi
       if (
         !orderData.details ||
         !Array.isArray(orderData.details) ||
         orderData.details.length === 0
       ) {
-        console.error("❌ Details array is invalid:", orderData.details);
         return;
       }
-
-      console.log("✅ Order data validation passed, sending to API...");
-      console.log("🔍 Is direct purchase?:", orderData.directPurchase);
 
       await orderStore.createOrder(navigate, orderData);
     } catch (error) {
@@ -690,13 +680,13 @@ const Order: React.FC = observer(() => {
                       {orderStore.orderFormData.phone}
                     </span>
                   </p>
-                  <p className="md:col-span-2">
+                  <p>
                     <strong className="text-gray-700">Email:</strong>{" "}
                     <span className="ml-2">
                       {orderStore.orderFormData.email}
                     </span>
                   </p>
-                  <p className="md:col-span-2">
+                  <p>
                     <strong className="text-gray-700">Địa chỉ:</strong>{" "}
                     <span className="ml-2">
                       {orderStore.orderFormData.address},{" "}

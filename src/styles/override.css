@@ -32,7 +32,6 @@
   cursor: not-allowed;
 }
 
-/* Delete button styling */
 .override-delete-btn {
   color: #ef4444 !important;
   border-color: #fecaca !important;
@@ -61,7 +60,6 @@
   transform: translateY(0px);
 }
 
-/* Delete confirm button in modal */
 .override-delete-confirm-btn {
   background-color: #ef4444 !important;
   border-color: #ef4444 !important;
@@ -72,7 +70,6 @@
   border-color: #dc2626 !important;
 }
 
-/* Cancel button in modal */
 .override-cancel-btn {
   color: #6b7280 !important;
   border-color: #d1d5db !important;
@@ -82,4 +79,64 @@
   color: #374151 !important;
   border-color: #9ca3af !important;
   background-color: #f9fafb !important;
+}
+
+.custom-checkbox .ant-checkbox-wrapper {
+  color: #374151 !important;
+}
+
+.custom-checkbox .ant-checkbox-wrapper:hover {
+  color: #16a34a !important;
+}
+
+.custom-checkbox .ant-checkbox .ant-checkbox-inner {
+  border-color: #d1d5db !important;
+}
+
+.custom-checkbox .ant-checkbox:hover .ant-checkbox-inner {
+  border-color: #16a34a !important;
+}
+
+.custom-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.custom-checkbox .ant-checkbox-checked:after {
+  border-color: #16a34a !important;
+}
+
+.custom-checkbox .ant-checkbox-indeterminate .ant-checkbox-inner {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.custom-drawer .ant-checkbox-wrapper {
+  color: #374151 !important;
+}
+
+.custom-drawer .ant-checkbox-wrapper:hover {
+  color: #16a34a !important;
+}
+
+.custom-drawer .ant-checkbox .ant-checkbox-inner {
+  border-color: #d1d5db !important;
+}
+
+.custom-drawer .ant-checkbox:hover .ant-checkbox-inner {
+  border-color: #16a34a !important;
+}
+
+.custom-drawer .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.custom-drawer .ant-checkbox-checked:after {
+  border-color: #16a34a !important;
+}
+
+.custom-drawer .ant-checkbox-indeterminate .ant-checkbox-inner {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
 }

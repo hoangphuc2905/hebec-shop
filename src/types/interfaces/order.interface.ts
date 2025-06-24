@@ -159,6 +159,7 @@ export interface OrderDetail {
 }
 
 export interface Order {
+  [x: string]: string;
   id: number;
   createdAt: number;
   updatedAt: number;

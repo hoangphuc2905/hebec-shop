@@ -6,7 +6,6 @@ import {
   Button,
   Avatar,
   Upload,
-  Card,
   Spin,
   Table,
   Tag,
@@ -20,9 +19,7 @@ import {
   HomeOutlined,
   LockOutlined,
   UploadOutlined,
-  EditOutlined,
   ShoppingOutlined,
-  PlusOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -31,7 +28,6 @@ import { getCustomerOrderList } from "../../../api/orderApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
 import type { Order } from "../../../types/interfaces/order.interface";
 import "../../../styles/override.css";
-
 
 const { TabPane } = Tabs;
 
@@ -424,13 +420,13 @@ const Profile: React.FC = () => {
                   >
                     Cập nhật thông tin
                   </Button>
-                  <Button
-                    type="default"
-                    icon={<LockOutlined />}
+                  <button
+                    className=" px-2 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
                     onClick={() => setPasswordModalVisible(true)}
                   >
+                    <LockOutlined className="mr-2" />
                     Đổi mật khẩu
-                  </Button>
+                  </button>
                 </div>
               </Form.Item>
             </Form>
