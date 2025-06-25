@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -8,7 +10,6 @@ import {
   Tag,
   Popconfirm,
   message,
-  Checkbox,
   Image,
   Pagination,
   Card,
@@ -21,27 +22,12 @@ import {
   ImportOutlined,
   ExportOutlined,
   DeleteOutlined,
-  EditOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
 import "./ProductList.css";
 import { getProducts } from "../../../api/productApi";
+import type { Product } from "../../../types/interfaces/product.interface";
 
 const { Option } = Select;
-
-// Interface cho Product
-interface Product {
-  id: string;
-  name: string;
-  image: string;
-  code: string;
-  price: number;
-  sold: number;
-  category: string;
-  rating: number;
-  featured: boolean;
-  status: "active" | "inactive";
-}
 
 // Interface cho các tùy chọn tìm kiếm
 interface FilterOptions {
@@ -356,9 +342,6 @@ const AdminProductList: React.FC = () => {
       key: "action",
       render: (_: any, record: Product) => (
         <Space size="middle">
-          <Button type="text" icon={<EditOutlined />} className="edit-button">
-            <Link to={`/admin/products/edit/${record.id}`}></Link>
-          </Button>
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa sản phẩm này?"
             onConfirm={() => handleDelete(record.id)}
@@ -369,7 +352,7 @@ const AdminProductList: React.FC = () => {
               danger
               type="text"
               icon={<DeleteOutlined />}
-              className="delete-button"
+              className="override-delete-btn"
             >
               Xóa
             </Button>
@@ -383,9 +366,11 @@ const AdminProductList: React.FC = () => {
     <div className="admin-product-list">
       {/* Filter và Actions */}
       <Card className="filter-card">
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={24} md={6}>
-            <div className="search-label">Tìm kiếm</div>
+        <Row gutter={[16, 16]} align="bottom">
+          <Col xs={24} sm={12} md={6}>
+            <div className="search-label" style={{ marginBottom: "8px" }}>
+              Tìm kiếm
+            </div>
             <Input
               placeholder="Nhập tên sản phẩm"
               value={filterOptions.search}
@@ -395,8 +380,10 @@ const AdminProductList: React.FC = () => {
               className="search-input"
             />
           </Col>
-          <Col xs={24} sm={24} md={6}>
-            <div className="search-label">Loại sản phẩm</div>
+          <Col xs={24} sm={12} md={6}>
+            <div className="search-label" style={{ marginBottom: "8px" }}>
+              Loại sản phẩm
+            </div>
             <Select
               placeholder="Chọn loại sản phẩm"
               value={filterOptions.category}
@@ -419,28 +406,41 @@ const AdminProductList: React.FC = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={24} md={12}>
-            <Space className="action-buttons">
+          <Col
+            xs={24}
+            sm={24}
+            md={12}
+            style={{ display: "flex", alignItems: "flex-end" }}
+          >
+            <Space className="action-buttons" wrap>
               <Button
                 type="primary"
                 icon={<SearchOutlined />}
                 onClick={handleSearch}
-                className="search-button"
+                className="override-ant-btn"
               >
                 Tìm kiếm
               </Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                className="add-button"
+                className="override-ant-btn"
                 onClick={() => (window.location.href = "/admin/products/add")}
               >
                 Thêm mới
               </Button>
-              <Button icon={<ImportOutlined />} className="import-button">
+              <Button
+                type="primary"
+                icon={<ImportOutlined />}
+                className="override-ant-btn"
+              >
                 Nhập sản phẩm
               </Button>
-              <Button icon={<ExportOutlined />} className="export-button">
+              <Button
+                type="primary"
+                icon={<ExportOutlined />}
+                className="override-ant-btn"
+              >
                 Xuất sản phẩm
               </Button>
             </Space>

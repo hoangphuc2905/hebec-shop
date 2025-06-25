@@ -27,8 +27,9 @@ export class OrderStore {
     "Hải Dương",
     "Bắc Ninh",
   ];
-  districts = ["Quận 1", "Quận 2", "Quận 3", "Huyện A", "Huyện B"];
-  wards = ["Phường 1", "Phường 2", "Xã A", "Xã B"];
+  cities: any[] = [];
+  districts: any[] = [];
+  wards: any[] = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -58,6 +59,26 @@ export class OrderStore {
   setOrderFormData = (data: OrderFormValues | null) => {
     this.orderFormData = data;
   };
+
+  setCities(cities: any[]) {
+    this.cities = cities;
+  }
+
+  setDistricts(districts: any[]) {
+    this.districts = districts;
+  }
+
+  setWards(wards: any[]) {
+    this.wards = wards;
+  }
+
+  clearDistricts() {
+    this.districts = [];
+  }
+
+  clearWards() {
+    this.wards = [];
+  }
 
   updateOrderFormData = (data: Partial<OrderFormValues>) => {
     if (this.orderFormData) {
@@ -103,7 +124,6 @@ export class OrderStore {
 
         const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
 
-      
         const directPurchaseItem = allCartItems.find(
           (item) => String(item.id) === String(locationState.productId)
         );
@@ -277,7 +297,6 @@ export class OrderStore {
         // Xóa localStorage
         localStorage.removeItem("cart");
         localStorage.removeItem("CartStore");
-       
 
         // Reset cartItems trong store này luôn
         runInAction(() => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -12,37 +13,22 @@ import {
   Col,
   DatePicker,
   Tabs,
-  Pagination,
 } from "antd";
 import {
   SearchOutlined,
   PlusOutlined,
   ImportOutlined,
   ExportOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import "./CustomerList.css";
 import dayjs from "dayjs";
 import locale from "antd/es/date-picker/locale/vi_VN";
 import { getCustomerList } from "../../../api/customerApi";
+import type { Customer } from "../../../types/interfaces/customer.interface";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
-
-// Interface cho Customer
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  birthday?: string;
-  group?: string;
-  createdAt: string;
-  source?: string;
-  points: number;
-  referrals: number;
-  followOA: boolean;
-}
 
 // Interface cho các tùy chọn tìm kiếm
 interface FilterOptions {
@@ -355,8 +341,8 @@ const AdminCustomerList: React.FC = () => {
     {
       title: "Thao tác",
       key: "action",
-      render: (_: any, record: Customer) => (
-        <Button type="primary" className="update-button">
+      render: (_: any) => (
+        <Button type="primary" className="override-ant-btn">
           Cập nhật
         </Button>
       ),
@@ -367,7 +353,7 @@ const AdminCustomerList: React.FC = () => {
   const tabItems = [
     {
       key: "withInfo",
-      label: "Khách có thông tin",
+      label: <span style={{ color: "#20a4a2" }}>Khách có thông tin</span>,
       children: (
         <Table
           rowSelection={{
@@ -385,7 +371,7 @@ const AdminCustomerList: React.FC = () => {
     },
     {
       key: "withoutInfo",
-      label: "Khách chưa có thông tin",
+      label: <span style={{ color: "#20a4a2" }}>Khách chưa có thông tin</span>,
       children: (
         <Table
           rowSelection={{
@@ -510,22 +496,30 @@ const AdminCustomerList: React.FC = () => {
                 type="primary"
                 icon={<SearchOutlined />}
                 onClick={handleSearch}
-                className="search-button"
+                className="override-ant-btn"
               >
                 Tìm kiếm
               </Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                className="add-button"
+                className="override-ant-btn"
                 onClick={() => (window.location.href = "/admin/customers/add")}
               >
                 Thêm mới
               </Button>
-              <Button icon={<ImportOutlined />} className="import-button">
+              <Button
+                type="primary"
+                icon={<ImportOutlined />}
+                className="override-ant-btn"
+              >
                 Nhập excel
               </Button>
-              <Button icon={<ExportOutlined />} className="export-button">
+              <Button
+                type="primary"
+                icon={<ExportOutlined />}
+                className="override-ant-btn"
+              >
                 Xuất excel
               </Button>
             </Space>

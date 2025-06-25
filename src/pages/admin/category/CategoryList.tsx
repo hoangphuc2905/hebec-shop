@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -10,7 +11,6 @@ import {
   Card,
   Row,
   Col,
-  Pagination,
   Tooltip,
   Image,
 } from "antd";
@@ -86,10 +86,10 @@ const AdminCategoryList: React.FC = () => {
               item.icon ||
               "https://via.placeholder.com/60x60?text=" +
                 encodeURIComponent(item.name || ""),
-            status: item.isActive ? "active" : "inactive",
+            status: item.isActive || item.isVisible ? "active" : "inactive",
             miniAppStatus: item.isVisibleInApp ? "active" : "inactive",
             highlight: item.isHighlight ? 1 : 0,
-            order: item.order || 0,
+            order: item.position || 0,
           }));
           setCategories(fetchedCategories);
           setTotal(response.pagination?.total || fetchedCategories.length);
@@ -109,10 +109,10 @@ const AdminCategoryList: React.FC = () => {
                 item.icon ||
                 "https://via.placeholder.com/60x60?text=" +
                   encodeURIComponent(item.name || ""),
-              status: item.isActive ? "active" : "inactive",
+              status: item.isActive || item.isVisible ? "active" : "inactive",
               miniAppStatus: item.isVisibleInApp ? "active" : "inactive",
               highlight: item.isHighlight ? 1 : 0,
-              order: item.order || 0,
+              order: item.position || 0,
             })
           );
           setCategories(fetchedCategories);
@@ -134,10 +134,10 @@ const AdminCategoryList: React.FC = () => {
                 item.icon ||
                 "https://via.placeholder.com/60x60?text=" +
                   encodeURIComponent(item.name || ""),
-              status: item.isActive ? "active" : "inactive",
+              status: item.isActive || item.isVisible ? "active" : "inactive",
               miniAppStatus: item.isVisibleInApp ? "active" : "inactive",
               highlight: item.isHighlight ? 1 : 0,
-              order: item.order || 0,
+              order: item.position || 0,
             })
           );
           setCategories(fetchedCategories);
@@ -213,10 +213,12 @@ const AdminCategoryList: React.FC = () => {
             className="category-image"
             preview={false}
             fallback="https://via.placeholder.com/40x40?text=No+Image"
-            style={{ objectFit: 'cover', borderRadius: '4px' }}
+            style={{ objectFit: "cover", borderRadius: "4px" }}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/40x40?text=${encodeURIComponent(record.name.charAt(0) || "?")}`;
+              target.src = `https://via.placeholder.com/40x40?text=${encodeURIComponent(
+                record.name.charAt(0) || "?"
+              )}`;
             }}
           />
           <div className="category-name">{text}</div>
@@ -274,14 +276,14 @@ const AdminCategoryList: React.FC = () => {
           <Button
             type="primary"
             icon={<UnorderedListOutlined />}
-            className="products-button"
+            className="override-ant-btn"
           >
             <Link to={`/admin/products?category=${record.id}`}>Sản phẩm</Link>
           </Button>
           <Button
             type="primary"
             icon={<EditOutlined />}
-            className="edit-button"
+            className="override-ant-btn"
           >
             <Link to={`/admin/category/edit/${record.id}`}>Chỉnh sửa</Link>
           </Button>
@@ -295,7 +297,7 @@ const AdminCategoryList: React.FC = () => {
               danger
               type="primary"
               icon={<DeleteOutlined />}
-              className="delete-button"
+              className="override-delete-btn"
             >
               Xóa
             </Button>
@@ -311,43 +313,57 @@ const AdminCategoryList: React.FC = () => {
       <Card className="filter-card">
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Input
-              placeholder="Nhập tên danh mục"
-              value={filterOptions.search}
-              onChange={(e) =>
-                setFilterOptions({ ...filterOptions, search: e.target.value })
-              }
-              className="search-input"
-            />
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                onClick={handleSearch}
-                className="search-button"
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontWeight: "500",
+                }}
               >
                 Tìm kiếm
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                className="add-button"
-                onClick={() => (window.location.href = "/admin/category/add")}
-              >
-                Thêm danh mục
-              </Button>
-              <Button
-                icon={<SortAscendingOutlined />}
-                className="sort-button"
-                onClick={() =>
-                  message.info("Chức năng sắp xếp đang phát triển")
+              </label>
+              <Input
+                placeholder="Nhập tên danh mục"
+                value={filterOptions.search}
+                onChange={(e) =>
+                  setFilterOptions({ ...filterOptions, search: e.target.value })
                 }
-              >
-                Sắp xếp
-              </Button>
-            </Space>
+                className="search-input"
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={16} lg={18}>
+            <div style={{ paddingTop: "32px" }}>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  className="override-ant-btn"
+                >
+                  Tìm kiếm
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  className="override-ant-btn"
+                  onClick={() => (window.location.href = "/admin/category/add")}
+                >
+                  Thêm danh mục
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<SortAscendingOutlined />}
+                  className="override-ant-btn"
+                  onClick={() =>
+                    message.info("Chức năng sắp xếp đang phát triển")
+                  }
+                >
+                  Sắp xếp
+                </Button>
+              </Space>
+            </div>
           </Col>
         </Row>
       </Card>

@@ -1,5 +1,4 @@
 .admin-order-list {
-  padding: 16px;
   background-color: #f5f5f5;
 }
 
@@ -117,7 +116,7 @@
 
 .override-ant-btn.ant-btn-primary:hover {
   background-color: #1c9997 !important;
-  border-color: #1c9997 !important;
+  border-color: #20a4a2 !important;
 }
 
 .export-button {
@@ -244,6 +243,43 @@
 .arrow-icon {
   font-size: 12px;
   color: #8c8c8c;
+}
+
+.search-input:hover,
+.search-input:focus {
+  border-color: #20a4a2 !important;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2) !important;
+}
+
+.date-picker:hover .ant-picker,
+.date-picker .ant-picker:focus,
+.date-picker .ant-picker-focused {
+  border-color: #20a4a2 !important;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2) !important;
+}
+
+.delivery-select:hover .ant-select-selector,
+.delivery-select .ant-select-focused .ant-select-selector {
+  border-color: #20a4a2 !important;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2) !important;
+}
+
+.ant-select-dropdown .ant-select-item-option-selected {
+  background-color: rgba(22, 163, 74, 0.1) !important;
+  color: #20a4a2 !important;
+}
+
+.ant-select-dropdown .ant-select-item-option:hover {
+  background-color: rgba(22, 163, 74, 0.1) !important;
+}
+
+.ant-picker-dropdown .ant-picker-cell:hover .ant-picker-cell-inner {
+  background: rgba(22, 163, 74, 0.1) !important;
+  border: 1px solid #20a4a2 !important;
+}
+
+.ant-picker-dropdown .ant-picker-cell-selected .ant-picker-cell-inner {
+  background: #20a4a2 !important;
 }
 
 /* Responsive */

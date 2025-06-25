@@ -20,6 +20,7 @@ export const getCategories = async (params?: any) => {
       },
       params,
     });
+    console.log("Respfffonse data:", response.data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Lỗi không xác định." };

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 
 const axiosClient = axios.create({
@@ -127,6 +128,44 @@ export const deleteCustomer = async (customerId: string) => {
       headers: {
         token: token || "",
       },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};
+
+// Hàm lấy lên city
+export const getCities = async () => {
+  try {
+    const response = await axiosClient.get("/customer/city");
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};
+
+
+// Hàm lấy lên district theo parentCode
+export const getDistricts = async (parentCode: number) => {
+  try {
+    const response = await axiosClient.get("/customer/district", {
+      params: {
+        parentCode: parentCode
+      }
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};
+
+export const getWards = async (parentCode: number) => {
+  try {
+    const response = await axiosClient.get("/customer/ward", {
+      params: {
+        parentCode: parentCode
+      }
     });
     return response.data;
   } catch (error: any) {

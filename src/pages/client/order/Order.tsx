@@ -26,6 +26,7 @@ import { observer } from "mobx-react-lite";
 import { orderStore } from "../../../stores/orderStore";
 import { EPaymentType } from "../../../types/enums/ePaymentType.enum";
 import type { OrderFormValues } from "../../../types/interfaces/order.interface";
+import { getCities, getDistricts, getWards } from "../../../api/customerApi"; // Import API functions
 import "../../../styles/override.css";
 
 const { Option } = Select;
@@ -77,10 +78,85 @@ const Order: React.FC = observer(() => {
       orderStore.loadCartData(location.state);
     }
 
+    // Load cities when component mounts
+    loadCities();
+
     return () => {
       orderStore.reset();
     };
   }, [location.state, directPurchase, product, quantity]);
+
+  const loadCities = async () => {
+    try {
+      const response = await getCities();
+      console.log("Cities response:", response);
+      // Lấy cities từ response.data.cities
+      orderStore.setCities(response.data?.cities || []);
+    } catch (error) {
+      console.error("Error loading cities:", error);
+    }
+  };
+
+  const loadDistricts = async (parentCode: number) => {
+    try {
+      const response = await getDistricts(parentCode);
+      console.log("Districts response:", response);
+      // Tương tự, có thể districts cũng nằm trong response.data.districts
+      orderStore.setDistricts(response.data?.districts || response.data || []);
+    } catch (error) {
+      console.error("Error loading districts:", error);
+    }
+  };
+
+  const loadWards = async (parentCode: number) => {
+    try {
+      const response = await getWards(parentCode);
+      console.log("Wards response:", response);
+      // Lấy wards từ response.data.wards hoặc response.data
+      orderStore.setWards(response.data?.wards || response.data || []);
+    } catch (error) {
+      console.error("Error loading wards:", error);
+    }
+  };
+
+  const handleProvinceChange = (value: number, option: any) => {
+    form.setFieldsValue({ district: undefined, ward: undefined });
+    orderStore.clearDistricts();
+    orderStore.clearWards();
+    loadDistricts(value);
+
+    // Lưu nameWithType thay vì name
+    const selectedCity = orderStore.cities.find(
+      (city: any) => city.code === value
+    );
+    if (selectedCity) {
+      form.setFieldsValue({ province: selectedCity.nameWithType });
+    }
+  };
+
+  const handleDistrictChange = (value: number, option: any) => {
+    form.setFieldsValue({ ward: undefined });
+    orderStore.clearWards();
+    loadWards(value);
+
+    // Lưu nameWithType thay vì name
+    const selectedDistrict = orderStore.districts.find(
+      (district: any) => district.code === value
+    );
+    if (selectedDistrict) {
+      form.setFieldsValue({ district: selectedDistrict.nameWithType });
+    }
+  };
+
+  const handleWardChange = (value: number, option: any) => {
+    // Lưu nameWithType thay vì name
+    const selectedWard = orderStore.wards.find(
+      (ward: any) => ward.code === value
+    );
+    if (selectedWard) {
+      form.setFieldsValue({ ward: selectedWard.nameWithType });
+    }
+  };
 
   const handleNextStep = () => {
     form
@@ -133,19 +209,21 @@ const Order: React.FC = observer(() => {
       totalAmount = product.price * (quantity || 1);
     } else if (orderStore.cartItems.length > 0) {
       // Từ giỏ hàng
-      orderDetails = orderStore.cartItems.map((item: {
-        id: string | number;
-        name: string;
-        price: number;
-        image: string;
-        quantity: number;
-      }) => ({
-        productId: item.id,
-        quantity: item.quantity,
-        price: item.price,
-        name: item.name,
-        image: item.image,
-      }));
+      orderDetails = orderStore.cartItems.map(
+        (item: {
+          id: string | number;
+          name: string;
+          price: number;
+          image: string;
+          quantity: number;
+        }) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+          image: item.image,
+        })
+      );
       totalAmount = orderStore.total;
     }
 
@@ -181,17 +259,19 @@ const Order: React.FC = observer(() => {
       }
 
       // Tạo Details array và validate
-      const detailsArray = orderDetails.map((item: {
-        productId: string | number;
-        quantity: number;
-        price: number;
-        name?: string;
-        image?: string;
-      }) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-      }));
+      const detailsArray = orderDetails.map(
+        (item: {
+          productId: string | number;
+          quantity: number;
+          price: number;
+          name?: string;
+          image?: string;
+        }) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })
+      );
 
       const orderData = {
         ...orderStore.orderFormData,
@@ -199,7 +279,7 @@ const Order: React.FC = observer(() => {
         totalAmount: totalAmount,
         shippingFee: 0,
         discount: 0,
-        directPurchase: directPurchase || false, 
+        directPurchase: directPurchase || false,
       };
 
       if (
@@ -351,12 +431,25 @@ const Order: React.FC = observer(() => {
                       },
                     ]}
                   >
-                    <Select placeholder="Chọn tỉnh/thành phố">
-                      {orderStore.provinces.map((province) => (
-                        <Option key={province} value={province}>
-                          {province}
-                        </Option>
-                      ))}
+                    <Select
+                      placeholder="Chọn tỉnh/thành phố"
+                      showSearch
+                      onChange={handleProvinceChange}
+                      filterOption={(input, option) =>
+                        (option?.children as string)
+                          ?.toLowerCase()
+                          .indexOf(input.toLowerCase()) >= 0
+                      }
+                    >
+                      {Array.isArray(orderStore.cities) &&
+                        orderStore.cities.map((city: any) => (
+                          <Option
+                            key={city.code || city.id}
+                            value={city.code || city.id}
+                          >
+                            {city.nameWithType}
+                          </Option>
+                        ))}
                     </Select>
                   </Form.Item>
 
@@ -370,12 +463,19 @@ const Order: React.FC = observer(() => {
                       },
                     ]}
                   >
-                    <Select placeholder="Chọn quận/huyện">
-                      {orderStore.districts.map((district) => (
-                        <Option key={district} value={district}>
-                          {district}
-                        </Option>
-                      ))}
+                    <Select
+                      placeholder="Chọn quận/huyện"
+                      onChange={handleDistrictChange}
+                    >
+                      {Array.isArray(orderStore.districts) &&
+                        orderStore.districts.map((district: any) => (
+                          <Option
+                            key={district.code || district.id}
+                            value={district.code || district.id}
+                          >
+                            {district.nameWithType}
+                          </Option>
+                        ))}
                     </Select>
                   </Form.Item>
 
@@ -389,12 +489,19 @@ const Order: React.FC = observer(() => {
                       },
                     ]}
                   >
-                    <Select placeholder="Chọn phường/xã">
-                      {orderStore.wards.map((ward) => (
-                        <Option key={ward} value={ward}>
-                          {ward}
-                        </Option>
-                      ))}
+                    <Select
+                      placeholder="Chọn phường/xã"
+                      onChange={handleWardChange}
+                    >
+                      {Array.isArray(orderStore.wards) &&
+                        orderStore.wards.map((ward: any) => (
+                          <Option
+                            key={ward.code || ward.id}
+                            value={ward.code || ward.id}
+                          >
+                            {ward.nameWithType}
+                          </Option>
+                        ))}
                     </Select>
                   </Form.Item>
                 </div>

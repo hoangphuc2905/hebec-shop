@@ -244,6 +244,21 @@ const Profile: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Add custom styles */}
+      <style>
+        {`
+          .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+            color: #16a34a !important;
+          }
+          .ant-tabs-ink-bar {
+            background: #16a34a !important;
+          }
+          .ant-tabs-tab:hover .ant-tabs-tab-btn {
+            color: #16a34a !important;
+          }
+        `}
+      </style>
+
       {/* Breadcrumb */}
       <nav className="text-sm mb-6">
         <ol className="list-none p-0 flex flex-wrap items-center">
@@ -268,17 +283,6 @@ const Profile: React.FC = () => {
               icon={!user?.avatar && <UserOutlined />}
               className="border-2 border-gray-200"
             />
-            {/* <Upload
-              fileList={fileList}
-              onChange={({ fileList }) => setFileList(fileList)}
-              maxCount={1}
-              showUploadList={false}
-              className="mt-2 flex justify-center"
-            >
-              <Button icon={<UploadOutlined />} size="small">
-                Thay đổi ảnh
-              </Button>
-            </Upload> */}
           </div>
           <div>
             <h2 className="text-xl font-bold">{user?.fullName}</h2>

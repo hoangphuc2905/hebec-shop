@@ -37,12 +37,6 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ collapsed, toggle }) => {
       onClick: () => navigate("/admin/profile"),
     },
     {
-      key: "settings",
-      label: "Cài đặt",
-      icon: <SettingOutlined />,
-      onClick: () => navigate("/admin/settings"),
-    },
-    {
       type: "divider",
     },
     {
