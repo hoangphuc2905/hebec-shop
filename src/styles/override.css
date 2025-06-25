@@ -140,3 +140,19 @@
   background-color: #16a34a !important;
   border-color: #16a34a !important;
 }
+
+/* Override InputNumber hover and focus states */
+.ant-input-number:hover {
+  border-color: #16a34a !important; 
+}
+
+.ant-input-number:focus,
+.ant-input-number-focused {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2) !important; /* green-500 with opacity */
+}
+
+.ant-input-number-handler:hover .ant-input-number-handler-up-inner,
+.ant-input-number-handler:hover .ant-input-number-handler-down-inner {
+  color: #16a34a !important;
+}

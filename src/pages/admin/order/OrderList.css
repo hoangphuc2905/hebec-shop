@@ -109,6 +109,17 @@
   border-color: #20a4a2;
 }
 
+.override-ant-btn.ant-btn-primary {
+  background-color: #20a4a2 !important;
+  border-color: #20a4a2 !important;
+  color: white !important;
+}
+
+.override-ant-btn.ant-btn-primary:hover {
+  background-color: #1c9997 !important;
+  border-color: #1c9997 !important;
+}
+
 .export-button {
   color: #20a4a2;
   border-color: #20a4a2;
@@ -241,22 +252,22 @@
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .action-buttons {
     margin-top: 12px;
     width: 100%;
   }
-  
+
   .statistics-bar {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .pagination-row {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .pagination-controls {
     width: 100%;
     justify-content: center;

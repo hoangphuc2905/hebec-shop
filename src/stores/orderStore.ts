@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { makeAutoObservable, runInAction } from "mobx";
 import { createOrder } from "../api/orderApi";
 import { EPaymentType } from "../types/enums/ePaymentType.enum";
@@ -91,34 +92,21 @@ export class OrderStore {
   // Load cart data
   loadCartData = (locationState: any) => {
     try {
-      console.log("Location state:", locationState);
-      console.log("Current localStorage cart:", localStorage.getItem("cart"));
-      console.log(
-        "Current localStorage CartStore:",
-        localStorage.getItem("CartStore")
-      ); // Thêm log này
-
       if (locationState?.directPurchase) {
         // Thử cả 2 key
-        let cartJson = localStorage.getItem("cart");
-        if (!cartJson) {
-          const cartStore = localStorage.getItem("CartStore");
-          if (cartStore) {
-            const cartStoreData = JSON.parse(cartStore);
-            cartJson = JSON.stringify(cartStoreData.cartItems || []);
-          }
+        const cartStore = localStorage.getItem("CartStore");
+        let cartJson;
+        if (cartStore) {
+          const cartStoreData = JSON.parse(cartStore);
+          cartJson = JSON.stringify(cartStoreData.cartItems || []);
         }
 
         const allCartItems: CartItem[] = cartJson ? JSON.parse(cartJson) : [];
 
-        console.log("All cart items:", allCartItems);
-        console.log("Looking for product ID:", locationState.productId);
-
+      
         const directPurchaseItem = allCartItems.find(
           (item) => String(item.id) === String(locationState.productId)
         );
-
-        console.log("Found direct purchase item:", directPurchaseItem);
 
         if (directPurchaseItem) {
           runInAction(() => {
@@ -158,14 +146,11 @@ export class OrderStore {
           }
         }
 
-        console.log("Loading regular cart items:", allCartItems);
-
         runInAction(() => {
           this.cartItems = allCartItems;
         });
       }
 
-      console.log("Final cart items:", this.cartItems);
       this.setLoading(false);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu giỏ hàng:", error);
@@ -241,7 +226,7 @@ export class OrderStore {
           isGift: false,
         }));
       } else {
-        // Fallback: sử dụng cartItems
+        // sử dụng cartItems
         finalDetails = this.cartItems.map((item) => ({
           quantity: item.quantity,
           productId: parseInt(item.id),
@@ -281,28 +266,23 @@ export class OrderStore {
         wardId: 1,
       };
 
-      console.log("=== FINAL API ORDER DATA ===");
-      console.log(JSON.stringify(apiOrderData, null, 2));
-
       message.loading({ content: "Đang xử lý đơn hàng...", key: "order" });
 
       const result = await createOrder(apiOrderData);
 
       // Kiểm tra và xóa giỏ hàng NGAY SAU KHI API THÀNH CÔNG
       const isDirectPurchase = orderData?.directPurchase === true;
-      console.log("🔍 Direct purchase check:", isDirectPurchase);
 
       if (!isDirectPurchase) {
         // Xóa localStorage
         localStorage.removeItem("cart");
         localStorage.removeItem("CartStore");
-        console.log("✅ Đã xóa localStorage giỏ hàng");
+       
 
         // Reset cartItems trong store này luôn
         runInAction(() => {
           this.cartItems = [];
         });
-        console.log("✅ Đã reset cartItems trong orderStore");
 
         // Dispatch events để notify các component khác
         window.dispatchEvent(new Event("cartUpdated"));
@@ -311,7 +291,6 @@ export class OrderStore {
             detail: { key: "cart", newValue: null },
           })
         );
-        console.log("✅ Đã dispatch events để cập nhật UI");
       } else {
         console.log("ℹ️ Mua ngay - không xóa giỏ hàng");
       }

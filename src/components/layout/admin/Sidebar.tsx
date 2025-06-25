@@ -136,27 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       getItem("Danh sách sản phẩm", "product-list"),
       getItem("Danh mục sản phẩm", "product-categories"),
     ]),
-    getItem("Chiến dịch", "campaigns", <RocketOutlined />, [
-      getItem("Khuyến mãi", "promotions"),
-      getItem("Flash Sale", "flash-sales"),
-    ]),
-    getItem("Khách hàng", "customers", <UserOutlined />, [
-      getItem("Danh sách khách hàng", "customer-list"),
-      getItem("Nhóm khách hàng", "customer-groups"),
-    ]),
-    getItem("Truyền thông", "marketing", <SoundOutlined />, [
-      getItem("Thông báo", "notifications"),
-      getItem("Banners", "banners"),
-    ]),
-    getItem("Cấu hình", "configuration", <SettingOutlined />, [
-      getItem("Thiết lập chung", "settings"),
-      getItem("Nhân viên", "staff"),
-      getItem("Phân quyền", "roles"),
-    ]),
-    getItem("Quản lý cửa hàng", "stores", <ShopOutlined />, [
-      getItem("Danh sách cửa hàng", "store-list"),
-      getItem("Cài đặt cửa hàng", "store-settings"),
-    ]),
+    getItem("Danh sách khách hàng", "customers", <UserOutlined />),
   ];
 
   // Xử lý click vào menu

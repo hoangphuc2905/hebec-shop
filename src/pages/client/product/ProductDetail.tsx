@@ -275,7 +275,7 @@ const ProductDetail: React.FC = observer(() => {
             <div className="border border-gray-300 rounded flex items-center mr-4">
               <button
                 onClick={decreaseQuantity}
-                className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                className="py-2 px-2 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
               >
                 -
               </button>
@@ -284,14 +284,14 @@ const ProductDetail: React.FC = observer(() => {
                 value={quantity}
                 onChange={handleQuantityChange}
                 min="1"
-                className="w-12 text-center py-1 border-0 focus:outline-none"
+                className="w-16 text-center py-1 border-0 focus:outline-none"
               />
-              <Button
+              <button
                 onClick={increaseQuantity}
-                className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                className="py-2 px-2 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
               >
                 +
-              </Button>
+              </button>
             </div>
           </div>
 

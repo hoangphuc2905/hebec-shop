@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -8,7 +9,6 @@ import {
   message,
   DatePicker,
   Select,
-  Switch,
 } from "antd";
 import {
   SearchOutlined,
@@ -31,7 +31,7 @@ const { RangePicker } = DatePicker;
 
 const ORDER_STATUSES = [
   { key: "all", text: "Tất cả", color: "" },
-  { key: "new", text: "Đã đặt hàng", color: "#20a4a2" },
+  { key: "new", text: "Đã đặt hàng", color: "#52c41a" },
   { key: "confirmed", text: "Đã xác nhận", color: "#faad14" },
   { key: "processing", text: "Đang xử lý", color: "#108ee9" },
   { key: "shipping", text: "Đang vận chuyển", color: "#1890ff" },
@@ -44,8 +44,6 @@ const AdminOrderList: React.FC = () => {
   // State
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     search: "",
     startDate: null,
@@ -230,7 +228,7 @@ const AdminOrderList: React.FC = () => {
   // Columns của Table - cập nhật theo dữ liệu thực tế
   const columns = [
     {
-      title: "Mã đơn hàng",
+      title: "Mã giao dịch",
       dataIndex: "code",
       key: "code",
       render: (text: string, record: Order) => (
@@ -242,14 +240,15 @@ const AdminOrderList: React.FC = () => {
     {
       title: "Khách hàng",
       key: "customerName",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: Order) => (
-        <div>
-          <div>{record.customer?.fullName || record.receiverName}</div>
-          <div style={{ fontSize: "12px", color: "#666" }}>
-            {record.customer?.phone || record.receiverPhone}
-          </div>
-        </div>
+        <div>{record.customer?.fullName || record.receiverName}</div>
+      ),
+    },
+    {
+      title: "Số điện thoại",
+      key: "customerPhone",
+      render: (_: any, record: Order) => (
+        <div>{record.customer?.phone || record.receiverPhone}</div>
       ),
     },
     {
@@ -258,7 +257,7 @@ const AdminOrderList: React.FC = () => {
       key: "paymentMethod",
     },
     {
-      title: "Trạng thái",
+      title: "Trạng thái đơn",
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
@@ -276,22 +275,7 @@ const AdminOrderList: React.FC = () => {
         );
       },
     },
-    {
-      title: "Địa chỉ giao hàng",
-      dataIndex: "receiverAddress",
-      key: "receiverAddress",
-      render: (text: string) => (
-        <div
-          style={{
-            maxWidth: "200px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {text}
-        </div>
-      ),
-    },
+
     {
       title: "Tổng tiền",
       dataIndex: "moneyFinal",
@@ -312,11 +296,8 @@ const AdminOrderList: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: Order) => (
         <Space size="small">
-          <Button type="primary" size="small">
+          <Button type="primary" size="small" className="override-ant-btn">
             <Link to={`/admin/orders/${record.id}`}>Chi tiết</Link>
-          </Button>
-          <Button type="default" size="small">
-            In
           </Button>
         </Space>
       ),
@@ -429,33 +410,24 @@ const AdminOrderList: React.FC = () => {
               type="primary"
               icon={<SearchOutlined />}
               onClick={() => setFilterOptions({ ...filterOptions, page: 1 })}
-              className="search-button"
+              className="override-ant-btn"
             >
               Tìm kiếm
             </Button>
-            <Button icon={<FileExcelOutlined />} className="export-button">
+            <Button
+              type="primary"
+              icon={<FileExcelOutlined />}
+              className="override-ant-btn"
+            >
               Xuất excel đơn hàng
             </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              className="create-button"
+              className="override-ant-btn"
             >
               Tạo đơn hàng
             </Button>
-          </div>
-        </div>
-
-        <div className="invoice-switch-row">
-          <div className="invoice-switch-container">
-            <Switch
-              checked={filterOptions.invoiceRequired}
-              onChange={(checked) =>
-                setFilterOptions({ ...filterOptions, invoiceRequired: checked })
-              }
-              className="invoice-switch"
-            />
-            <span className="invoice-label">Yêu cầu hóa đơn</span>
           </div>
         </div>
       </div>
@@ -497,11 +469,6 @@ const AdminOrderList: React.FC = () => {
       {/* Orders Table */}
       <div className="orders-table-container">
         <Table
-          rowSelection={{
-            type: "checkbox",
-            onChange: (selectedRowKeys: React.Key[]) =>
-              setSelectedRows(selectedRowKeys as string[]),
-          }}
           columns={columns}
           dataSource={orders}
           rowKey="id"

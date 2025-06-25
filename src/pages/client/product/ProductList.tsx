@@ -34,11 +34,9 @@ const CategoryProducts = () => {
     useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   
-  // State để quản lý trang hiện tại của từng danh mục
   const [categoryPages, setCategoryPages] = useState<{ [key: number]: number }>(
     {}
   );
-  // State để quản lý danh mục nào đang hiển thị tất cả sản phẩm
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
     new Set()
   );

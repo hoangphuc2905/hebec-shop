@@ -46,6 +46,24 @@
   margin-right: 10px;
 }
 
+/* Custom hover styles */
+.ant-menu-dark.ant-menu-inline .ant-menu-item:hover,
+.ant-menu-dark.ant-menu-inline .ant-menu-submenu-title:hover {
+  color: white !important;
+}
+
+/* Custom selected styles - chỉ khi được chọn thực sự */
+.ant-menu-dark.ant-menu-inline .ant-menu-item-selected {
+  background-color: #20a4a2 !important;
+  color: white !important;
+}
+
+/* Style cho submenu items selected */
+.ant-menu-dark.ant-menu-inline .ant-menu-submenu .ant-menu-item-selected {
+  background-color: #20a4a2 !important;
+  color: white !important;
+}
+
 /* Custom scrollbar */
 .admin-sidebar::-webkit-scrollbar {
   width: 6px;

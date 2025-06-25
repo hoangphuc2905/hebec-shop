@@ -155,7 +155,7 @@ const Cart: React.FC = observer(() => {
                                       value as number
                                     )
                                   }
-                                  className="w-20"
+                                  className="px-4 text-green-600 font-medium rounded-md  transition-colors custom-input-number"
                                   size="small"
                                 />
                               </div>

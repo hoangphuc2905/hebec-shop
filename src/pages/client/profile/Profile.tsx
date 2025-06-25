@@ -11,6 +11,7 @@ import {
   Tag,
   Modal,
   message,
+  Space,
 } from "antd";
 import {
   UserOutlined,
@@ -19,6 +20,7 @@ import {
   HomeOutlined,
   LockOutlined,
   ShoppingOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { getCustomerProfile } from "../../../api/customerApi";
@@ -32,6 +34,8 @@ const { TabPane } = Tabs;
 const Profile: React.FC = () => {
   const [user, setUser] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [searchText, setSearchText] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
   const [profileForm] = Form.useForm();
@@ -51,16 +55,38 @@ const Profile: React.FC = () => {
 
       if (response?.data?.orders) {
         setOrders(response.data.orders);
+        setFilteredOrders(response.data.orders);
       } else {
         setOrders([]);
+        setFilteredOrders([]);
       }
     } catch (error) {
       console.error("Không thể lấy danh sách đơn hàng:", error);
       message.error("Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.");
       setOrders([]);
+      setFilteredOrders([]);
     } finally {
       setLoadingOrders(false);
     }
+  };
+
+  // Hàm tìm kiếm đơn hàng
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    if (!value.trim()) {
+      setFilteredOrders(orders);
+    } else {
+      const filtered = orders.filter((order) =>
+        order.code.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredOrders(filtered);
+    }
+  };
+
+  // Reset tìm kiếm
+  const handleResetSearch = () => {
+    setSearchText("");
+    setFilteredOrders(orders);
   };
 
   useEffect(() => {
@@ -362,12 +388,45 @@ const Profile: React.FC = () => {
                 <Spin tip="Đang tải đơn hàng..." />
               </div>
             ) : orders.length > 0 ? (
-              <Table
-                columns={orderColumns}
-                dataSource={orders}
-                rowKey="id"
-                pagination={{ pageSize: 5 }}
-              />
+              <div>
+                {/* Thanh tìm kiếm */}
+                <div className="mb-4">
+                  <Space.Compact style={{ width: "100%", maxWidth: 400 }}>
+                    <Input
+                      placeholder="Tìm kiếm theo mã đơn hàng..."
+                      value={searchText}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      prefix={<SearchOutlined className="text-gray-400" />}
+                      allowClear
+                      onClear={handleResetSearch}
+                    />
+                    <Button
+                      type="primary"
+                      className="override-ant-btn"
+                      onClick={() => handleSearch(searchText)}
+                    >
+                      Tìm kiếm
+                    </Button>
+                  </Space.Compact>
+                </div>
+
+                {/* Bảng đơn hàng */}
+                <Table
+                  columns={orderColumns}
+                  dataSource={filteredOrders}
+                  rowKey="id"
+                  pagination={{
+                    pageSize: 5,
+                    showTotal: (total, range) =>
+                      `${range[0]}-${range[1]} của ${total} đơn hàng`,
+                  }}
+                  locale={{
+                    emptyText: searchText
+                      ? `Không tìm thấy đơn hàng nào với mã "${searchText}"`
+                      : "Không có đơn hàng nào",
+                  }}
+                />
+              </div>
             ) : (
               <div className="text-center py-10">
                 <ShoppingOutlined
