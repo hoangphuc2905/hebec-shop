@@ -80,11 +80,18 @@ const Register = () => {
       cities.find((c) => c.code === province)?.nameWithType || ""
     }`;
 
+    const selectedCity = cities.find((c) => c.code === province);
+    const selectedDistrict = districts.find((d) => d.code === district);
+    const selectedWard = wards.find((w) => w.code === ward);
+
     const customerData: Partial<Customer> = {
       phone,
       password,
       fullName,
       address,
+      cityId: selectedCity?.id || 0,
+      districtId: selectedDistrict?.id || 0,
+      wardId: selectedWard?.id || 0,
     };
 
     const data = {

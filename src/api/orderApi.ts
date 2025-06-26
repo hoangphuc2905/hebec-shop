@@ -101,6 +101,8 @@ export const estimateOrder = async (orderData: any) => {
       {
         headers: {
           token: token || "",
+          "is-dev": "false",
+          "Content-Type": "application/json",
         },
       }
     );

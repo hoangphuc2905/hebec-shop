@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import {
   ShoppingCartOutlined,
@@ -17,6 +17,7 @@ const Cart: React.FC = observer(() => {
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleQuantityChange = (id: string, quantity: number) => {
     cartStore.updateQuantity(id, quantity);
@@ -50,7 +51,25 @@ const Cart: React.FC = observer(() => {
       return;
     }
 
-    navigate("/order");
+    // Lấy user từ localStorage
+    const userStr = localStorage.getItem("user");
+    let cityId = 0,
+      districtId = 0,
+      wardId = 0,
+      address = "";
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        cityId = user.city?.id || 0;
+        districtId = user.district?.id || 0;
+        wardId = user.ward?.id || 0;
+        address = user.address || "";
+      } catch {}
+    }
+
+    navigate("/order", {
+      state: { cityId, districtId, wardId, address },
+    });
   };
 
   if (cartStore.loading) {

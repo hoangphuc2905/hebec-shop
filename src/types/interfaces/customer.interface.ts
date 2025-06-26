@@ -47,9 +47,9 @@ export interface Customer {
   // customerTransactions: CustomerTransaction[]
   // registerCustomerTransactions: CustomerTransaction[]
   // deposits: Deposit[]
-  // city: City
-  // district: District
-  // ward: Ward
+  city: City;
+  district: District;
+  ward: Ward;
   // refCustomer: Customer
   // promotionCampaign: PromotionCampaign
   // oneSignals: OneSignal[]

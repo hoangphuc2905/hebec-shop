@@ -70,6 +70,21 @@ export const getCustomerProfile = async () => {
   }
 };
 
+// Hàm cập nhật thông tin khách hàng
+export const updateCustomerProfile = async (data: any) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axiosClient.put("/customer/auth/profile", data, {
+      headers: {
+        token: token || "",
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};
+
 // Hàm lấy danh sách khách hàng cho admin
 export const getCustomerList = async (params?: any) => {
   try {
@@ -145,14 +160,13 @@ export const getCities = async () => {
   }
 };
 
-
 // Hàm lấy lên district theo parentCode
 export const getDistricts = async (parentCode: number) => {
   try {
     const response = await axiosClient.get("/customer/district", {
       params: {
-        parentCode: parentCode
-      }
+        parentCode: parentCode,
+      },
     });
     return response.data;
   } catch (error: any) {
@@ -164,8 +178,8 @@ export const getWards = async (parentCode: number) => {
   try {
     const response = await axiosClient.get("/customer/ward", {
       params: {
-        parentCode: parentCode
-      }
+        parentCode: parentCode,
+      },
     });
     return response.data;
   } catch (error: any) {

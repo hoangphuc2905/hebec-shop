@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Form,
@@ -52,11 +52,39 @@ const initialValues: OrderFormValues = {
 
 const Order: React.FC = observer(() => {
   const [form] = Form.useForm();
+  const [shippingFee, setShippingFee] = useState<number>(0); // Thêm state phí ship
   const navigate = useNavigate();
   const location = useLocation();
   const { directPurchase, product, quantity } = location.state || {};
 
-  console.log("Order received state:", location.state);
+  const fetchEstimate = async (
+    cityId: number,
+    districtId: number,
+    wardId: number
+  ) => {
+    if (!cityId || !districtId || !wardId) return; // Chỉ gọi khi đủ địa chỉ
+    try {
+      const payload = {
+        order: {
+          note: form.getFieldValue("notes") || "",
+        },
+        details: cartStore.cartItems.map((item) => ({
+          productId: Number(item.id),
+          quantity: item.quantity,
+        })),
+        cityId,
+        districtId,
+        wardId,
+        storeId: 50,
+      };
+      console.log("Payload gửi đi:", payload);
+      const res = await estimateOrder(payload);
+      console.log("Estimate order response:", res);
+      setShippingFee(res?.data?.shipFee || 0);
+    } catch (err) {
+      setShippingFee(0);
+    }
+  };
 
   useEffect(() => {
     console.log("Direct purchase:", directPurchase);
@@ -85,50 +113,22 @@ const Order: React.FC = observer(() => {
 
     loadCities();
 
-    let userInfo = userStore.user;
-    if (!userInfo) {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        try {
-          userInfo = JSON.parse(userStr);
-        } catch {}
+    // Lấy thông tin user từ localStorage (nếu có)
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        form.setFieldsValue({
+          fullName: user.fullName || "",
+          phone: user.phone || "",
+          address: user.address || "",
+        });
+      } catch (e) {
+        // Không làm gì nếu lỗi parse
       }
-      if (!userInfo) {
-        const token = localStorage.getItem("token");
-        if (token) {
-          try {
-            const decoded: any = jwt_decode(token);
-            userInfo = {
-              fullName: decoded.fullName,
-              phone: decoded.phone,
-              address: decoded.address,
-            };
-          } catch {}
-        }
-      }
-    }
-    if (userInfo) {
-      form.setFieldsValue({
-        fullName: userInfo.fullName || "",
-        phone: userInfo.phone || "",
-        address: userInfo.address || "",
-      });
     }
 
-    // Gọi estimateOrder khi vào trang
-    const fetchEstimate = async () => {
-      try {
-        await estimateOrder({
-          items: cartStore.cartItems.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
-        });
-      } catch (err) {
-        // Xử lý lỗi nếu cần
-      }
-    };
-    fetchEstimate();
+    // KHÔNG setFieldsValue cho province, district, ward ở đây
 
     return () => {
       orderStore.reset();
@@ -168,43 +168,29 @@ const Order: React.FC = observer(() => {
     }
   };
 
-  const handleProvinceChange = (value: number, option: any) => {
+  const handleProvinceChange = (value: number) => {
     form.setFieldsValue({ district: undefined, ward: undefined });
     orderStore.clearDistricts();
     orderStore.clearWards();
     loadDistricts(value);
 
-    // Lưu nameWithType thay vì name
-    const selectedCity = orderStore.cities.find(
-      (city: any) => city.code === value
-    );
-    if (selectedCity) {
-      form.setFieldsValue({ province: selectedCity.nameWithType });
-    }
+    // Không setFieldsValue({ province: nameWithType }) nữa!
+    // Chỉ giữ lại value là id
   };
 
-  const handleDistrictChange = (value: number, option: any) => {
+  const handleDistrictChange = (value: number) => {
     form.setFieldsValue({ ward: undefined });
     orderStore.clearWards();
     loadWards(value);
 
-    // Lưu nameWithType thay vì name
-    const selectedDistrict = orderStore.districts.find(
-      (district: any) => district.code === value
-    );
-    if (selectedDistrict) {
-      form.setFieldsValue({ district: selectedDistrict.nameWithType });
-    }
+    // Không setFieldsValue({ district: nameWithType }) nữa!
   };
 
-  const handleWardChange = (value: number, option: any) => {
-    // Lưu nameWithType thay vì name
-    const selectedWard = orderStore.wards.find(
-      (ward: any) => ward.code === value
-    );
-    if (selectedWard) {
-      form.setFieldsValue({ ward: selectedWard.nameWithType });
-    }
+  const handleWardChange = (value: number) => {
+    // Không setFieldsValue({ ward: nameWithType }) nữa!
+    const cityId = form.getFieldValue("province");
+    const districtId = form.getFieldValue("district");
+    fetchEstimate(cityId, districtId, value);
   };
 
   const handleNextStep = () => {
@@ -326,7 +312,7 @@ const Order: React.FC = observer(() => {
         ...orderStore.orderFormData,
         details: detailsArray,
         totalAmount: totalAmount,
-        shippingFee: 0,
+        shipFee: shippingFee, // Đổi từ shippingFee thành shipFee
         discount: 0,
         directPurchase: directPurchase || false,
       };
@@ -773,15 +759,19 @@ const Order: React.FC = observer(() => {
             </div>
             <div className="flex justify-between mb-2">
               <span>Phí vận chuyển:</span>
-              <span>Miễn phí</span>
+              <span className="font-medium text-green-600">
+                {shippingFee > 0
+                  ? `${shippingFee.toLocaleString()} đ`
+                  : "Miễn phí"}
+              </span>
             </div>
             <Divider className="my-3" />
             <div className="flex justify-between text-lg font-bold mb-4">
               <span>Tổng cộng:</span>
               <span className="text-green-600">
                 {directPurchase && product && orderStore.cartItems.length === 0
-                  ? formatPrice(product.price * (quantity || 1))
-                  : formatPrice(orderStore.total)}
+                  ? formatPrice(product.price * (quantity || 1) + shippingFee)
+                  : formatPrice(orderStore.total + shippingFee)}
               </span>
             </div>
           </Card>
@@ -961,7 +951,11 @@ const Order: React.FC = observer(() => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Phí vận chuyển:</span>
-                    <span className="font-medium text-green-600">Miễn phí</span>
+                    <span className="font-medium text-green-600">
+                      {shippingFee > 0
+                        ? `${shippingFee.toLocaleString()} đ`
+                        : "Miễn phí"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Giảm giá:</span>
@@ -976,8 +970,10 @@ const Order: React.FC = observer(() => {
                       {directPurchase &&
                       product &&
                       orderStore.cartItems.length === 0
-                        ? formatPrice(product.price * (quantity || 1))
-                        : formatPrice(orderStore.total)}
+                        ? formatPrice(
+                            product.price * (quantity || 1) + shippingFee
+                          )
+                        : formatPrice(orderStore.total + shippingFee)}
                     </span>
                   </div>
                 </div>
