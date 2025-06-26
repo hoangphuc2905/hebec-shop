@@ -4,11 +4,12 @@ import { ShareAltOutlined, HeartOutlined } from "@ant-design/icons";
 import { Button, Image, Input, message } from "antd";
 import { getProductById } from "../../../api/productApi";
 import type { Product } from "../../../types/interfaces/product.interface";
-import { useStore } from "../../../stores";
+import { cartStore } from "../../../stores/cartStore";
 import { observer } from "mobx-react-lite";
+import { formatDateString } from "../../../utils/date";
+import { formatPrice } from "../../../utils/money";
 
 const ProductDetail: React.FC = observer(() => {
-  const { cartStore } = useStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
@@ -59,15 +60,7 @@ const ProductDetail: React.FC = observer(() => {
     fetchProductDetail();
   }, [id]);
 
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
-  };
 
-  const formatDate = (timestamp: number) => {
-    if (!timestamp) return "N/A";
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString("vi-VN");
-  };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -379,7 +372,7 @@ const ProductDetail: React.FC = observer(() => {
                       <tr>
                         <td className="py-2 text-gray-600">Ngày tạo</td>
                         <td className="py-2">
-                          {formatDate(product.createdAt)}
+                          {formatDateString(product.createdAt)}
                         </td>
                       </tr>
                       {product.store && (

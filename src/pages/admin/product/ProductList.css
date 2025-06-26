@@ -20,24 +20,24 @@
 }
 
 .search-button {
-  background-color: #20a4a2;
-  border-color: #20a4a2;
+  background-color: #16a34a;
+  border-color: #16a34a;
 }
 
 .add-button {
-  background-color: #20a4a2;
-  border-color: #20a4a2;
+  background-color: #16a34a;
+  border-color: #16a34a;
 }
 
 .override-ant-btn.ant-btn-primary {
-  background-color: #20a4a2 !important;
-  border-color: #20a4a2 !important;
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
   color: white !important;
 }
 
 .override-ant-btn.ant-btn-primary:hover {
-  background-color: #1c9997 !important;
-  border-color: #20a4a2 !important;
+  background-color: #15803d !important;
+  border-color: #16a34a !important;
 }
 
 .import-button,

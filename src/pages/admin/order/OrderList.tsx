@@ -25,6 +25,8 @@ import type {
   Order,
   FilterOptions,
 } from "../../../types/interfaces/order.interface";
+import { formatCurrency } from "../../../utils/money";
+import { formatDate } from "../../../utils/date";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -215,15 +217,6 @@ const AdminOrderList: React.FC = () => {
     fetchData();
   }, [filterOptions]);
 
-  // Format date từ timestamp
-  const formatDate = (timestamp: number) => {
-    return dayjs(timestamp * 1000).format("DD/MM/YYYY HH:mm");
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN").format(amount) + " đ";
-  };
 
   // Columns của Table - cập nhật theo dữ liệu thực tế
   const columns = [

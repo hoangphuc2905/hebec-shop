@@ -12,7 +12,7 @@ import logo from "../../../assets/logo.png";
 import { getCustomerProfile } from "../../../api/customerApi";
 import { logoutCustomer } from "../../../api/customerApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
-import { useStore } from "../../../stores";
+import { cartStore } from "../../../stores/cartStore";
 import { observer } from "mobx-react-lite";
 
 const useToken = (key: string) => {
@@ -42,7 +42,6 @@ const useToken = (key: string) => {
 };
 
 const Header: React.FC = observer(() => {
-  const { cartStore } = useStore();
   const [user, setUser] = useState<Customer | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);

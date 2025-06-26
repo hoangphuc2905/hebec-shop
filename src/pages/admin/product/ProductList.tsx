@@ -26,6 +26,7 @@ import {
 import "./ProductList.css";
 import { getProducts } from "../../../api/productApi";
 import type { Product } from "../../../types/interfaces/product.interface";
+import { formatPrice } from "../../../utils/money";
 
 const { Option } = Select;
 
@@ -265,9 +266,7 @@ const AdminProductList: React.FC = () => {
   };
 
   // Định dạng giá
-  const formatPrice = (price: number) => {
-    return price.toLocaleString("vi-VN");
-  };
+ 
 
   // Columns của Table
   const columns = [

@@ -110,5 +110,6 @@ class CartStore {
     return this.cartItems.find((item) => item.id === id);
   };
 }
-
+const cartStore = new CartStore();
+export { cartStore };
 export default CartStore;

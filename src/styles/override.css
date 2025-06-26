@@ -143,7 +143,7 @@
 
 /* Override InputNumber hover and focus states */
 .ant-input-number:hover {
-  border-color: #16a34a !important; 
+  border-color: #16a34a !important;
 }
 
 .ant-input-number:focus,

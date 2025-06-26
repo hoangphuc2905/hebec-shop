@@ -27,7 +27,12 @@ import { orderStore } from "../../../stores/orderStore";
 import { EPaymentType } from "../../../types/enums/ePaymentType.enum";
 import type { OrderFormValues } from "../../../types/interfaces/order.interface";
 import { getCities, getDistricts, getWards } from "../../../api/customerApi"; // Import API functions
+import { estimateOrder } from "../../../api/orderApi";
+import { cartStore } from "../../../stores/cartStore";
 import "../../../styles/override.css";
+import * as jwt_decode from "jwt-decode";
+import { userStore } from "../../../stores/userStore";
+import { formatPrice } from "../../../utils/money";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -78,8 +83,52 @@ const Order: React.FC = observer(() => {
       orderStore.loadCartData(location.state);
     }
 
-    // Load cities when component mounts
     loadCities();
+
+    let userInfo = userStore.user;
+    if (!userInfo) {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          userInfo = JSON.parse(userStr);
+        } catch {}
+      }
+      if (!userInfo) {
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const decoded: any = jwt_decode(token);
+            userInfo = {
+              fullName: decoded.fullName,
+              phone: decoded.phone,
+              address: decoded.address,
+            };
+          } catch {}
+        }
+      }
+    }
+    if (userInfo) {
+      form.setFieldsValue({
+        fullName: userInfo.fullName || "",
+        phone: userInfo.phone || "",
+        address: userInfo.address || "",
+      });
+    }
+
+    // Gọi estimateOrder khi vào trang
+    const fetchEstimate = async () => {
+      try {
+        await estimateOrder({
+          items: cartStore.cartItems.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+        });
+      } catch (err) {
+        // Xử lý lỗi nếu cần
+      }
+    };
+    fetchEstimate();
 
     return () => {
       orderStore.reset();
@@ -673,12 +722,12 @@ const Order: React.FC = observer(() => {
                         {item.name}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {orderStore.formatPrice(item.price)} x {item.quantity}
+                        {formatPrice(item.price)} x {item.quantity}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">
-                        {orderStore.formatPrice(item.price * item.quantity)}
+                        {formatPrice(item.price * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -698,12 +747,12 @@ const Order: React.FC = observer(() => {
                       {product.name}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {orderStore.formatPrice(product.price)} x {quantity || 1}
+                      {formatPrice(product.price)} x {quantity || 1}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      {orderStore.formatPrice(product.price * (quantity || 1))}
+                      {formatPrice(product.price * (quantity || 1))}
                     </p>
                   </div>
                 </div>
@@ -718,8 +767,8 @@ const Order: React.FC = observer(() => {
               <span>Tạm tính:</span>
               <span>
                 {directPurchase && product && orderStore.cartItems.length === 0
-                  ? orderStore.formatPrice(product.price * (quantity || 1))
-                  : orderStore.formatPrice(orderStore.subtotal)}
+                  ? formatPrice(product.price * (quantity || 1))
+                  : formatPrice(orderStore.subtotal)}
               </span>
             </div>
             <div className="flex justify-between mb-2">
@@ -731,8 +780,8 @@ const Order: React.FC = observer(() => {
               <span>Tổng cộng:</span>
               <span className="text-green-600">
                 {directPurchase && product && orderStore.cartItems.length === 0
-                  ? orderStore.formatPrice(product.price * (quantity || 1))
-                  : orderStore.formatPrice(orderStore.total)}
+                  ? formatPrice(product.price * (quantity || 1))
+                  : formatPrice(orderStore.total)}
               </span>
             </div>
           </Card>
@@ -842,13 +891,12 @@ const Order: React.FC = observer(() => {
                             {item.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {orderStore.formatPrice(item.price)} ×{" "}
-                            {item.quantity}
+                            {formatPrice(item.price)} × {item.quantity}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="font-medium text-sm text-green-600">
-                            {orderStore.formatPrice(item.price * item.quantity)}
+                            {formatPrice(item.price * item.quantity)}
                           </p>
                         </div>
                       </div>
@@ -865,15 +913,12 @@ const Order: React.FC = observer(() => {
                           {product.name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {orderStore.formatPrice(product.price)} ×{" "}
-                          {quantity || 1}
+                          {formatPrice(product.price)} × {quantity || 1}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-sm text-green-600">
-                          {orderStore.formatPrice(
-                            product.price * (quantity || 1)
-                          )}
+                          {formatPrice(product.price * (quantity || 1))}
                         </p>
                       </div>
                     </div>
@@ -910,10 +955,8 @@ const Order: React.FC = observer(() => {
                       {directPurchase &&
                       product &&
                       orderStore.cartItems.length === 0
-                        ? orderStore.formatPrice(
-                            product.price * (quantity || 1)
-                          )
-                        : orderStore.formatPrice(orderStore.subtotal)}
+                        ? formatPrice(product.price * (quantity || 1))
+                        : formatPrice(orderStore.subtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -933,10 +976,8 @@ const Order: React.FC = observer(() => {
                       {directPurchase &&
                       product &&
                       orderStore.cartItems.length === 0
-                        ? orderStore.formatPrice(
-                            product.price * (quantity || 1)
-                          )
-                        : orderStore.formatPrice(orderStore.total)}
+                        ? formatPrice(product.price * (quantity || 1))
+                        : formatPrice(orderStore.total)}
                     </span>
                   </div>
                 </div>

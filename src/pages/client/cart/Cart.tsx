@@ -9,12 +9,11 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { Button, InputNumber, Spin, message, Modal } from "antd";
-import { useStore } from "../../../stores";
+import { cartStore } from "../../../stores/cartStore";
 import type { CartItem } from "../../../types/interfaces/cartItem.interface";
 import "../../../styles/override.css";
 
 const Cart: React.FC = observer(() => {
-  const { cartStore } = useStore();
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const navigate = useNavigate();
@@ -220,18 +219,6 @@ const Cart: React.FC = observer(() => {
                       <span className="font-medium text-gray-800">
                         {cartStore.formatPrice(cartStore.totalPrice)}
                       </span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">Phí vận chuyển:</span>
-                      <span className="font-medium text-green-600">
-                        Miễn phí
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">Giảm giá:</span>
-                      <span className="font-medium text-gray-800">0 đ</span>
                     </div>
 
                     <div className="border-t border-gray-200 pt-4">

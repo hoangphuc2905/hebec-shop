@@ -204,11 +204,6 @@ export class OrderStore {
     );
   }
 
-  // Format price
-  formatPrice = (price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
-  };
-
   // Get payment method text
   getPaymentMethodText = (method: string) => {
     switch (method) {
@@ -350,4 +345,7 @@ export class OrderStore {
   };
 }
 
-export const orderStore = new OrderStore();
+const orderStore = new OrderStore();
+export { orderStore };
+
+export default OrderStore;

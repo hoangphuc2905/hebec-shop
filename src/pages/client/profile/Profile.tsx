@@ -28,6 +28,8 @@ import { getCustomerOrderList } from "../../../api/orderApi";
 import type { Customer } from "../../../types/interfaces/customer.interface";
 import type { Order } from "../../../types/interfaces/order.interface";
 import "../../../styles/override.css";
+import { formatDateString } from "../../../utils/date";
+import { formatPrice } from "../../../utils/money";
 
 const { TabPane } = Tabs;
 
@@ -70,16 +72,22 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Hàm tìm kiếm đơn hàng
-  const handleSearch = (value: string) => {
+  // Hàm tìm kiếm đơn hàng sử dụng API
+  const handleSearch = async (value: string) => {
     setSearchText(value);
-    if (!value.trim()) {
-      setFilteredOrders(orders);
-    } else {
-      const filtered = orders.filter((order) =>
-        order.code.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredOrders(filtered);
+    setLoadingOrders(true);
+    try {
+      const response = await getCustomerOrderList({ search: value });
+      if (response?.data?.orders) {
+        setFilteredOrders(response.data.orders);
+      } else {
+        setFilteredOrders([]);
+      }
+    } catch (error) {
+      setFilteredOrders([]);
+      message.error("Không thể tìm kiếm đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -132,62 +140,31 @@ const Profile: React.FC = () => {
     setOrderDetailModalVisible(true);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "orange";
+        return { text: "Chờ xác nhận", color: "orange" };
+      case "CONFIRM":
+        return { text: "Đã xác nhận", color: "gold" };
       case "PROCESSING":
-        return "blue";
+        return { text: "Đang xử lý", color: "blue" };
       case "SHIPPED":
-        return "cyan";
-      case "DELIVERED":
-        return "green";
+        return { text: "Đang giao hàng", color: "cyan" };
+      case "DELIVERING":
+        return { text: "Đã giao hàng", color: "green" };
+      case "COMPLETE":
+        return { text: "Hoàn thành", color: "success" };
       case "CANCELLED":
-        return "red";
+        return { text: "Đã hủy", color: "red" };
       case "RETURNED":
-        return "purple";
+        return { text: "Đã trả hàng", color: "purple" };
       case "REFUNDED":
-        return "geekblue";
+        return { text: "Đã hoàn tiền", color: "geekblue" };
       default:
-        return "default";
+        return { text: status, color: "default" };
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "Chờ xác nhận";
-      case "PROCESSING":
-        return "Đang xử lý";
-      case "SHIPPED":
-        return "Đang giao hàng";
-      case "DELIVERED":
-        return "Đã giao hàng";
-      case "CANCELLED":
-        return "Đã hủy";
-      case "RETURNED":
-        return "Đã trả hàng";
-      case "REFUNDED":
-        return "Đã hoàn tiền";
-      default:
-        return status;
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000); // Convert từ timestamp sang milliseconds
-    return date.toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const orderColumns = [
     {
@@ -200,7 +177,7 @@ const Profile: React.FC = () => {
       title: "Ngày đặt",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (timestamp: number) => formatDate(timestamp),
+      render: (timestamp: number) => formatDateString(timestamp),
     },
     {
       title: "Tổng tiền",
@@ -214,9 +191,10 @@ const Profile: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
-      ),
+      render: (status: string) => {
+        const { text, color } = getStatusInfo(status);
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
       title: "Thao tác",
@@ -310,26 +288,11 @@ const Profile: React.FC = () => {
               <Form.Item
                 name="fullName"
                 label="Họ tên"
-                rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
+                // rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
               >
                 <Input
                   prefix={<UserOutlined className="text-gray-400" />}
                   placeholder="Họ tên"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
-                ]}
-              >
-                <Input
-                  prefix={<MailOutlined className="text-gray-400" />}
-                  placeholder="Email"
-                  disabled
                 />
               </Form.Item>
 
@@ -357,23 +320,7 @@ const Profile: React.FC = () => {
               </Form.Item>
 
               <Form.Item>
-                <div className="flex justify-between">
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    className="override-ant-btn"
-                    loading={loading}
-                  >
-                    Cập nhật thông tin
-                  </Button>
-                  <button
-                    className=" px-2 border border-green-600 text-green-600 font-medium rounded-md hover:bg-green-50 transition-colors"
-                    onClick={() => setPasswordModalVisible(true)}
-                  >
-                    <LockOutlined className="mr-2" />
-                    Đổi mật khẩu
-                  </button>
-                </div>
+                <div className="flex justify-between"></div>
               </Form.Item>
             </Form>
           </TabPane>
@@ -399,7 +346,7 @@ const Profile: React.FC = () => {
                     <Input
                       placeholder="Tìm kiếm theo mã đơn hàng..."
                       value={searchText}
-                      onChange={(e) => handleSearch(e.target.value)}
+                      onChange={(e) => setSearchText(e.target.value)} // chỉ set state, không gọi API
                       prefix={<SearchOutlined className="text-gray-400" />}
                       allowClear
                       onClear={handleResetSearch}
@@ -541,11 +488,11 @@ const Profile: React.FC = () => {
                 <div>
                   <h3 className="font-bold">#{selectedOrder.code}</h3>
                   <p className="text-sm text-gray-500">
-                    Ngày đặt: {formatDate(selectedOrder.createdAt)}
+                    Ngày đặt: {formatDateString(selectedOrder.createdAt)}
                   </p>
                 </div>
-                <Tag color={getStatusColor(selectedOrder.status)}>
-                  {getStatusText(selectedOrder.status)}
+                <Tag color={getStatusInfo(selectedOrder.status).color}>
+                  {getStatusInfo(selectedOrder.status).text}
                 </Tag>
               </div>
             </div>

@@ -90,3 +90,22 @@ export const getCustomerOrderList = async (params?: any) => {
     throw error.response?.data || { message: "Lỗi không xác định." };
   }
 };
+
+// estimate order
+export const estimateOrder = async (orderData: any) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axiosClient.post(
+      "/customer/order/estimate",
+      orderData,
+      {
+        headers: {
+          token: token || "",
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Lỗi không xác định." };
+  }
+};

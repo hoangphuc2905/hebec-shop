@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ClientLayout from "./layouts/ClientLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import { ConfigProvider } from "antd";
-import { StoreProvider } from "./stores";
 
 // Client pages
 import HomePage from "./pages/client/home/Home";
@@ -25,7 +24,6 @@ import AdminOrder from "./pages/admin/order/OrderList";
 function App() {
   return (
     <ConfigProvider>
-      <StoreProvider>
         <BrowserRouter>
           <Routes>
             {/* Client Routes */}
@@ -57,7 +55,6 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </StoreProvider>
     </ConfigProvider>
   );
 }

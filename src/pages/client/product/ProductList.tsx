@@ -25,6 +25,7 @@ import {
 import type { Product } from "../../../types/interfaces/product.interface";
 import type { ProductCategory } from "../../../types/interfaces/productCategory.interface";
 import "../../../styles/override.css";
+import { formatPrice } from "../../../utils/money";
 
 const CategoryProducts = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -92,10 +93,6 @@ const CategoryProducts = () => {
     };
 
     fetchData();
-  }, []);
-
-  const formatPrice = useCallback((price: number) => {
-    return `${price.toLocaleString("vi-VN")} đ`;
   }, []);
 
   const handleSearchChange = useCallback(
@@ -479,7 +476,7 @@ const CategoryProducts = () => {
                               <img
                                 src={product.image}
                                 alt={product.name}
-                                className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
+                                className="w-full aspect-square object-contain group-hover:scale-105 transition-transform duration-300"
                               />
                             </div>
                             <div className="p-4">
