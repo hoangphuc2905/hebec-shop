@@ -760,9 +760,7 @@ const Order: React.FC = observer(() => {
             <div className="flex justify-between mb-2">
               <span>Phí vận chuyển:</span>
               <span className="font-medium text-green-600">
-                {shippingFee > 0
-                  ? `${shippingFee.toLocaleString()} đ`
-                  : "Miễn phí"}
+                {shippingFee > 0 ? `${shippingFee.toLocaleString()} đ` : "0 đ"}
               </span>
             </div>
             <Divider className="my-3" />
